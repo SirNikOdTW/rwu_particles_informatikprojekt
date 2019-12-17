@@ -1,49 +1,70 @@
 /*
  * A vector with three floats
  */
-struct vector3f
+typedef struct vector3f
 {
     float x;
     float y;
     float z;
-};
+} vector3f;
 
 /*
  * A particle has a position and a direction
  */
-struct particle
+typedef struct particle
 {
-    struct vector3f position;
-    struct vector3f direction;
-};
+    vector3f *position;
+    vector3f *direction;
+} particle;
 
 /*
  * An emitter has a position and contains an array of particles
  */
-struct emitter
+typedef struct emitter
 {
-    struct vector3f position;
-    struct particle *particles;
+    vector3f *position;
+    particle **particles;
     int pamount;
-};
+} emitter;
 
 /*
  * A particle system consists of one or more emitter
  */
-struct particle_system
+typedef struct particle_system
 {
-    struct emitter *emitters;
+    emitter **emitters;
     int eamount;
-};
+} particle_system;
 
 /*
- *
+ * Initializes a particle
  */
-int initParticle(struct vector3f pos, struct vector3f dir);
+particle *initParticle(vector3f *pos, vector3f *dir);
 
 /*
- *
+ * Initializes an emitter
  */
-int initVector3f(int x, int y, int z);
+emitter *initEmitter(vector3f *pos, int pamount);
+
+/*
+ * Initializes a particle system
+ */
+particle_system *initParticleSystem(int eamount);
+
+/*
+ * Updates particle
+ */
+int updateParticles(float dt, particle_system *particleSystem);
+
+/*
+ * Updates particle
+ */
+int drawParticles(particle_system *particleSystem);
+
+/*
+ * Initializes a vector
+ * For that it allocates memory that must be freed later
+ */
+vector3f *initVector3f(float x, float y, float z);
 
 

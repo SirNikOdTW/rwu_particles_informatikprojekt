@@ -3,4 +3,4 @@ project(Informatikprojekt C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(Informatikprojekt main.c particlesystem.h)
+add_executable(Informatikprojekt main.c particlesystem.h particlesystem.c)
