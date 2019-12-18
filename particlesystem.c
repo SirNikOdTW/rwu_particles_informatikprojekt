@@ -1,5 +1,7 @@
-#include "particlesystem.h"
 #include <malloc.h>
+#include <GLFW/glfw3.h>
+
+#include "particlesystem.h"
 
 /*
  * Initializes a particle
