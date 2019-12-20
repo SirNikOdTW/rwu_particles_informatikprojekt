@@ -67,4 +67,17 @@ int drawParticles(particle_system *particleSystem);
  */
 vector3f *initVector3f(float x, float y, float z);
 
+/*
+ * Frees an given emitter with all particles
+ */
+void freeEmitter(emitter *e);
 
+/*
+ * Frees all emitters within an particle system
+ */
+void freeEmitters(particle_system *ps);
+
+/*
+ * Frees all emitter and particles within a particle system
+ */
+void freeParticleSystem(particle_system *ps);

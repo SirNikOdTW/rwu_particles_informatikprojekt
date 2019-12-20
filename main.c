@@ -20,7 +20,7 @@ int main()
 
     glfwSetErrorCallback(error_callback);
 
-    GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "My Title", NULL, NULL);
 
     if (!window)
     {
@@ -30,32 +30,46 @@ int main()
 
     glfwMakeContextCurrent(window);
 
+    vector3f *epos = initVector3f(0, 0, 0);
+    emitter *e = initEmitter(epos, 1000);
+    particle_system *ps = initParticleSystem(1);
+    (ps->emitters)[0] = e;
+
+    initRandomParticles(e);
+
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
         int width, height;
 
         glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float) height;
+
+        int b = 0;
+        for (int i = 0; i < e->pamount; i++)
+        {
+            vector3f *p = (e->particles)[i]->position;
+            if (p->x > 1 || p->x < -1 || p->y > 1 || p->y < -1 || p->z > 1 || p->z < -1)
+            {
+                b=1;
+                break;
+            }
+        }
+
+        if (!b)
+        {
+            updateParticles(4000, ps);
+        }
 
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        glMatrixMode(GL_MODELVIEW);
+        glBegin(GL_POINTS);
+        for (int i = 0; i < e->pamount; i++)
+        {
 
-        glLoadIdentity();
-        glRotatef((float) glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
-
-        glBegin(GL_TRIANGLES);
-        glColor3f(1.f, 0.f, 0.f);
-        glVertex3f(-0.6f, -0.4f, 0.f);
-        glColor3f(0.f, 1.f, 0.f);
-        glVertex3f(0.6f, -0.4f, 0.f);
-        glColor3f(0.f, 0.f, 1.f);
-        glVertex3f(0.f, 0.6f, 0.f);
+            glColor3f((float) rand() / RAND_MAX, (float) rand() / RAND_MAX, (float) rand() / RAND_MAX);
+            vector3f *p = (e->particles)[i]->position;
+            glVertex3f(p->x, p->y, p->z);
+        }
         glEnd();
 
         glfwSwapBuffers(window);
@@ -66,20 +80,8 @@ int main()
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    /*vector3f *epos = initVector3f(0, 0, 0);
-    emitter *e = initEmitter(epos, 10);
-
-    initRandomParticles(e);
-
-    printEmitter(e);
-
-    for (int i = 0; i < e->pamount; i++)
-    {
-        free((e->particles)[i]);
-    }
-
     free(epos);
-    free(e);*/
+    freeEmitter(e);
 
     return 0;
 }
@@ -89,12 +91,20 @@ void error_callback(int error, const char* description)
     fputs(description, stderr);
 }
 
+/*************************/
+float rv()
+{
+    int i = rand()%2 ? -1 : 1;
+    return (float) i * rand() / RAND_MAX;
+}
+/*************************/
+
 void initRandomParticles(emitter *e)
 {
     for (int i = 0; i < e->pamount; i++)
     {
         vector3f *pos = initVector3f(e->position->x, e->position->y, e->position->z);
-        vector3f *dir = initVector3f((float) rand() / RAND_MAX, (float) rand() / RAND_MAX, (float) rand() / RAND_MAX);
+        vector3f *dir = initVector3f(rv(), rv(), rv());
         (e->particles)[i] = initParticle(pos, dir);
     }
 }

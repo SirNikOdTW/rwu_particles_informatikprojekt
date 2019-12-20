@@ -40,9 +40,22 @@ particle_system *initParticleSystem(int eamount)
 /*
  * Updates particles
  */
-int updateParticles(float dt, particle_system *particleSystem)
+int updateParticles(float dt, particle_system *ps)
 {
-
+    emitter *e;
+    float t = 1 / dt;
+    for (int i = 0; i < ps->eamount; i++)
+    {
+        e = (ps->emitters)[i];
+        for (int j = 0; j < e->pamount; j++)
+        {
+            vector3f *p = (e->particles)[j]->position;
+            vector3f *d = (e->particles)[j]->direction;
+            p->x += d->x * t;
+            p->y += d->y * t;
+            p->z += d->z * t;
+        }
+    }
 }
 
 /*
@@ -64,4 +77,37 @@ vector3f *initVector3f(float x, float y, float z)
     vector->y = y;
     vector->z = z;
     return vector;
+}
+
+/*
+ * Frees a given emitter and all corresponding particles
+ */
+void freeEmitter(emitter *e)
+{
+    for (int j = 0; j < e->pamount; j++)
+    {
+        free((e->particles)[j]);
+    }
+
+    free(e);
+}
+
+/*
+ * Frees all emitters within a particle system
+ */
+void freeEmitters(particle_system *ps)
+{
+    for (int i = 0; i < ps->eamount; i++)
+    {
+        freeEmitter((ps->emitters)[i]);
+    }
+}
+
+/*
+ * Frees all emitters and particles within a particle system
+ */
+void freeParticleSystem(particle_system *ps)
+{
+    freeEmitters(ps);
+    free(ps);
 }
