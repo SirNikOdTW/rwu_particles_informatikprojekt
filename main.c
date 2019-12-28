@@ -31,44 +31,49 @@ int main()
     glfwMakeContextCurrent(window);
 
     vector3f *epos = initVector3f(0, 0, 0);
-    emitter *e = initEmitter(epos, 1000);
+    emitter *e = initEmitter(epos, 10000);
     particle_system *ps = initParticleSystem(1);
     (ps->emitters)[0] = e;
 
     initRandomParticles(e);
 
+    double time, tFrame, tLast = 0;
+    int width, height, b = 0;
+
     while (!glfwWindowShouldClose(window))
     {
-        int width, height;
+        time = glfwGetTime();
+        tFrame = time - tLast;
+        tLast = time;
 
         glfwGetFramebufferSize(window, &width, &height);
 
-        int b = 0;
-        for (int i = 0; i < e->pamount; i++)
+        for (int i = 0; !b && i < e->pamount; i++)
         {
             vector3f *p = (e->particles)[i]->position;
             if (p->x > 1 || p->x < -1 || p->y > 1 || p->y < -1 || p->z > 1 || p->z < -1)
             {
                 b=1;
-                break;
             }
         }
 
         if (!b)
         {
-            updateParticles(4000, ps);
+            updateParticles((float) tFrame, ps);
         }
 
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glBegin(GL_POINTS);
+        particle *p;
+        vector3f *pos;
         for (int i = 0; i < e->pamount; i++)
         {
-
-            glColor3f((float) rand() / RAND_MAX, (float) rand() / RAND_MAX, (float) rand() / RAND_MAX);
-            vector3f *p = (e->particles)[i]->position;
-            glVertex3f(p->x, p->y, p->z);
+            p = (e->particles)[i];
+            glColor3f(p->color->x, p->color->y, p->color->z);
+            pos = p->position;
+            glVertex3f(pos->x, pos->y, pos->z);
         }
         glEnd();
 
@@ -81,7 +86,7 @@ int main()
     glfwTerminate();
 
     free(epos);
-    freeEmitter(e);
+    freeParticleSystem(ps);
 
     return 0;
 }
@@ -105,7 +110,8 @@ void initRandomParticles(emitter *e)
     {
         vector3f *pos = initVector3f(e->position->x, e->position->y, e->position->z);
         vector3f *dir = initVector3f(rv(), rv(), rv());
-        (e->particles)[i] = initParticle(pos, dir);
+        vector3f *color = initVector3f(255, 255, 255);
+        (e->particles)[i] = initParticle(pos, dir, color, 100.f);
     }
 }
 

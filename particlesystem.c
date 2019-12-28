@@ -6,11 +6,13 @@
 /*
  * Initializes a particle
  */
-particle *initParticle(vector3f *pos, vector3f *dir)
+particle *initParticle(vector3f *pos, vector3f *dir, vector3f *color, float age)
 {
     particle *p = malloc(sizeof(particle));
     p->position = pos;
     p->direction = dir;
+    p->color = color;
+    p->age = age;
     return p;
 }
 
@@ -43,17 +45,21 @@ particle_system *initParticleSystem(int eamount)
 int updateParticles(float dt, particle_system *ps)
 {
     emitter *e;
-    float t = 1 / dt;
+    particle *p;
     for (int i = 0; i < ps->eamount; i++)
     {
         e = (ps->emitters)[i];
         for (int j = 0; j < e->pamount; j++)
         {
-            vector3f *p = (e->particles)[j]->position;
-            vector3f *d = (e->particles)[j]->direction;
-            p->x += d->x * t;
-            p->y += d->y * t;
-            p->z += d->z * t;
+            p = (e->particles)[j];
+
+            p->position->x += p->direction->x * dt;
+            p->position->y += p->direction->y * dt;
+            p->position->z += p->direction->z * dt;
+
+            p->color->x -= 0.25f;
+            p->color->y -= 0.25f;
+            p->color->z -= 0.25f;
         }
     }
 }

@@ -15,6 +15,8 @@ typedef struct particle
 {
     vector3f *position;
     vector3f *direction;
+    vector3f *color;
+    float age;
 } particle;
 
 /*
@@ -39,7 +41,7 @@ typedef struct particle_system
 /*
  * Initializes a particle
  */
-particle *initParticle(vector3f *pos, vector3f *dir);
+particle *initParticle(vector3f *pos, vector3f *dir, vector3f *color, float age);
 
 /*
  * Initializes an emitter
