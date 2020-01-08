@@ -46,7 +46,6 @@ int main()
         tFrame = time - tLast;
         tLast = time;
 
-        glClearColor(0.05f, 0.05f, 0.05f, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         glfwGetFramebufferSize(window, &width, &height);
 
@@ -62,12 +61,16 @@ int main()
             glColor3f(p->color->x, p->color->y, p->color->z);
             pos = p->position;
 
-            glBegin(GL_QUADS);
+            glBegin(GL_POINTS);
             glVertex3f(pos->x, pos->y, pos->z);
-            glVertex3f(pos->x+.1, pos->y, pos->z);
-            glVertex3f(pos->x+.1, pos->y-.1, pos->z);
-            glVertex3f(pos->x, pos->y-.1, pos->z);
             glEnd();
+
+            /*glBegin(GL_QUADS);
+            glVertex3f(pos->x, pos->y, pos->z);
+            glVertex3f(pos->x+.01, pos->y, pos->z);
+            glVertex3f(pos->x+.01, pos->y-.01, pos->z);
+            glVertex3f(pos->x, pos->y-.01, pos->z);
+            glEnd();*/
         }
 
         glfwSwapBuffers(window);
@@ -92,28 +95,22 @@ void calcPos(particle *p, float dt)
 
 void calcCol(particle *p)
 {
-    p->color->x = 0.5f;
-    p->color->y = 0.01f;
-    p->color->z = 0.9f;
+    p->color->x = 1;
+    p->color->y = 1;
+    p->color->z = 1;
 }
 
 /*************************************************************************************************************/
-/*************************/
-float rv()
-{
-    int i = rand()%2 ? -1 : 1;
-    return (float) i * rand() / RAND_MAX;
-}
-/*************************/
-
 void initRandomParticles(emitter *e)
 {
     for (int i = 0; i < e->pamount; i++)
     {
         vector3f *pos = initVector3f(e->position->x, e->position->y, e->position->z);
-        vector3f *dir = initVector3f(rv(), rv(), rv());
+        vector3f *dir = initVector3f(((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX,
+                                     ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX,
+                                     ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX);
         vector3f *color = initVector3f(1, 1, 1);
-        (e->particles)[i] = initParticle(pos, dir, color, 100.f);
+        (e->particles)[i] = initParticle(pos, dir, color, rand() / 100.0f);
     }
 }
 

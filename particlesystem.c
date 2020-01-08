@@ -1,4 +1,5 @@
 #include <malloc.h>
+#include <stdlib.h>
 
 #include "particlesystem.h"
 
@@ -51,10 +52,32 @@ int updateParticles(float dt, particle_system *ps, CalculatePositionFunction cal
         for (int j = 0; j < e->pamount; j++)
         {
             p = (e->particles)[j];
-            calculatePosition(p, dt);
-            calculateColor(p);
+
+            if (p->age < 0)
+            {
+                resetParticle(e, p);
+            }
+            else
+            {
+                calculatePosition(p, dt);
+                calculateColor(p);
+                p->age -= 0.1f;
+            }
         }
     }
+}
+
+void resetParticle(emitter *e, particle *p)
+{
+    p->position->x = e->position->x;
+    p->position->y = e->position->y;
+    p->position->z = e->position->z;
+
+    p->direction->x = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
+    p->direction->y = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
+    p->direction->z = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
+
+    p->age = rand() / 100.0f;
 }
 
 /*
