@@ -1,5 +1,4 @@
 #include <malloc.h>
-#include <GLFW/glfw3.h>
 
 #include "particlesystem.h"
 
@@ -42,7 +41,7 @@ particle_system *initParticleSystem(int eamount)
 /*
  * Updates particles
  */
-int updateParticles(float dt, particle_system *ps)
+int updateParticles(float dt, particle_system *ps, CalculatePositionFunction calculatePosition, CalculateColorFunction calculateColor)
 {
     emitter *e;
     particle *p;
@@ -52,14 +51,8 @@ int updateParticles(float dt, particle_system *ps)
         for (int j = 0; j < e->pamount; j++)
         {
             p = (e->particles)[j];
-
-            p->position->x += p->direction->x * dt;
-            p->position->y += p->direction->y * dt;
-            p->position->z += p->direction->z * dt;
-
-            p->color->x -= 0.25f;
-            p->color->y -= 0.25f;
-            p->color->z -= 0.25f;
+            calculatePosition(p, dt);
+            calculateColor(p);
         }
     }
 }
@@ -86,13 +79,24 @@ vector3f *initVector3f(float x, float y, float z)
 }
 
 /*
+ * Frees a given particle and all corresponding data
+ */
+void freeParticle(particle *p)
+{
+    free(p->position);
+    free(p->direction);
+    free(p->color);
+    free(p);
+}
+
+/*
  * Frees a given emitter and all corresponding particles
  */
 void freeEmitter(emitter *e)
 {
     for (int j = 0; j < e->pamount; j++)
     {
-        free((e->particles)[j]);
+        freeParticle((e->particles)[j]);
     }
 
     free(e);

@@ -39,6 +39,16 @@ typedef struct particle_system
 } particle_system;
 
 /*
+ * A function to calculate the new position of a particle
+ */
+typedef void (* CalculatePositionFunction)(particle *particle, float dt);
+
+/*
+ * A function to calculate the new color of a particle
+ */
+typedef void (* CalculateColorFunction)(particle *particle);
+
+/*
  * Initializes a particle
  */
 particle *initParticle(vector3f *pos, vector3f *dir, vector3f *color, float age);
@@ -56,7 +66,7 @@ particle_system *initParticleSystem(int eamount);
 /*
  * Updates particle
  */
-int updateParticles(float dt, particle_system *particleSystem);
+int updateParticles(float dt, particle_system *particleSystem, CalculatePositionFunction calculatePosition, CalculateColorFunction calculateColor);
 
 /*
  * Updates particle
@@ -68,6 +78,11 @@ int drawParticles(particle_system *particleSystem);
  * For that it allocates memory that must be freed later
  */
 vector3f *initVector3f(float x, float y, float z);
+
+/*
+ * Frees a given particle and all corresponding data
+ */
+void freeParticle(particle *p);
 
 /*
  * Frees an given emitter with all particles

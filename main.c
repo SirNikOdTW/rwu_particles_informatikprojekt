@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <stdlib.h>
-#include <GLFW/glfw3.h>
 
 #include "particlesystem.h"
+#include "initOpenGL.h"
 
 char *printVector(vector3f *v);
 void printParticle(particle *v);
@@ -11,34 +11,34 @@ void printEmitter(emitter *e);
 void initRandomParticles(emitter *e);
 void error_callback(int error, const char* description);
 
+void calcPos(particle *p, float dt);
+void calcCol(particle *p);
+
 int main()
 {
-    if (!glfwInit())
-    {
-        exit(EXIT_FAILURE);
-    }
+    // Init OpenGL and GLFW
+    initGLFW();
+    setErrorCallbackGL();
 
-    glfwSetErrorCallback(error_callback);
+    int width = 800, height = 800;
+    GLFWwindow *window = createGLFWWindow(width, height, "Informatikprojekt - OpenGL");
 
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "My Title", NULL, NULL);
+    setCurrentContextGL(window);
+    setFramebufferSizeCallbackGL(window);
 
-    if (!window)
-    {
-        glfwTerminate();
-        exit(EXIT_FAILURE);
-    }
-
-    glfwMakeContextCurrent(window);
+    // glad
+    initGlad();
 
     vector3f *epos = initVector3f(0, 0, 0);
-    emitter *e = initEmitter(epos, 10000);
+    emitter *e = initEmitter(epos, 1000);
     particle_system *ps = initParticleSystem(1);
     (ps->emitters)[0] = e;
 
     initRandomParticles(e);
 
     double time, tFrame, tLast = 0;
-    int width, height, b = 0;
+    unsigned int vbo;
+    float vert[3] = {0.1f, 0.2f, 0.3f};
 
     while (!glfwWindowShouldClose(window))
     {
@@ -46,26 +46,14 @@ int main()
         tFrame = time - tLast;
         tLast = time;
 
+        glClearColor(0.05f, 0.05f, 0.05f, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
         glfwGetFramebufferSize(window, &width, &height);
 
-        for (int i = 0; !b && i < e->pamount; i++)
-        {
-            vector3f *p = (e->particles)[i]->position;
-            if (p->x > 1 || p->x < -1 || p->y > 1 || p->y < -1 || p->z > 1 || p->z < -1)
-            {
-                b=1;
-            }
-        }
+        initVertexBuffer(&vbo, vert);
 
-        if (!b)
-        {
-            updateParticles((float) tFrame, ps);
-        }
+        updateParticles((float) tFrame, ps, calcPos, calcCol);
 
-        glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glBegin(GL_POINTS);
         particle *p;
         vector3f *pos;
         for (int i = 0; i < e->pamount; i++)
@@ -73,17 +61,21 @@ int main()
             p = (e->particles)[i];
             glColor3f(p->color->x, p->color->y, p->color->z);
             pos = p->position;
+
+            glBegin(GL_QUADS);
             glVertex3f(pos->x, pos->y, pos->z);
+            glVertex3f(pos->x+.1, pos->y, pos->z);
+            glVertex3f(pos->x+.1, pos->y-.1, pos->z);
+            glVertex3f(pos->x, pos->y-.1, pos->z);
+            glEnd();
         }
-        glEnd();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     //END
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    terminateGLFW(window);
 
     free(epos);
     freeParticleSystem(ps);
@@ -91,11 +83,21 @@ int main()
     return 0;
 }
 
-void error_callback(int error, const char* description)
+void calcPos(particle *p, float dt)
 {
-    fputs(description, stderr);
+    p->position->x += p->direction->x * dt;
+    p->position->y += p->direction->y * dt;
+    p->position->z += p->direction->z * dt;
 }
 
+void calcCol(particle *p)
+{
+    p->color->x = 0.5f;
+    p->color->y = 0.01f;
+    p->color->z = 0.9f;
+}
+
+/*************************************************************************************************************/
 /*************************/
 float rv()
 {
@@ -110,7 +112,7 @@ void initRandomParticles(emitter *e)
     {
         vector3f *pos = initVector3f(e->position->x, e->position->y, e->position->z);
         vector3f *dir = initVector3f(rv(), rv(), rv());
-        vector3f *color = initVector3f(255, 255, 255);
+        vector3f *color = initVector3f(1, 1, 1);
         (e->particles)[i] = initParticle(pos, dir, color, 100.f);
     }
 }
