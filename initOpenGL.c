@@ -63,10 +63,16 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void initVertexBuffer(unsigned int *VBO, float *vertices)
+void initVertexBufferObject(unsigned int *VBO, float *vertices)
 {
     glGenBuffers(1, VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, *VBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+}
+
+void initVertexArrayBuffer(unsigned int *VAO)
+{
+    glGenVertexArrays(1, VAO);
+    glBindVertexArray(*VAO);
 }
 

@@ -18,6 +18,7 @@ void terminateGLFW(GLFWwindow *window);
 void errorCallback(int error, const char* description);
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 
-void initVertexBuffer(unsigned int *VBO,float *vertices);
+void initVertexBufferObject(unsigned int *VBO, float *vertices);
+void initVertexArrayBuffer(unsigned int *VAO);
 
 #endif //INFORMATIKPROJEKT_INITOPENGL_H

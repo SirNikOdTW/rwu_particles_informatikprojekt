@@ -103,3 +103,8 @@ void freeEmitters(particle_system *ps);
  * Frees all emitter and particles within a particle system
  */
 void freeParticleSystem(particle_system *ps);
+
+/*
+ * Creates float array out of a particle system
+ */
+float *serializeParticlesystem(particle_system *ps);

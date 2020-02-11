@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "particlesystem.h"
 
@@ -77,7 +78,7 @@ void resetParticle(emitter *e, particle *p)
     p->direction->y = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
     p->direction->z = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
 
-    p->age = rand() / 100.0f;
+    p->age = rand() / 10;
 }
 
 /*
@@ -122,6 +123,7 @@ void freeEmitter(emitter *e)
         freeParticle((e->particles)[j]);
     }
 
+    free(e->position);
     free(e);
 }
 
@@ -143,4 +145,49 @@ void freeParticleSystem(particle_system *ps)
 {
     freeEmitters(ps);
     free(ps);
+}
+
+/*
+ * Creates float array out of a particle system
+ */
+float *serializeParticlesystem(particle_system *ps)
+{
+    int particleAmount = 0;
+    for (int i = 0; i < ps->eamount; i++)
+    {
+        particleAmount += (ps->emitters[i])->pamount;
+    }
+
+    unsigned long particleBytesAmount = sizeof(vector3f) * 3 + sizeof(float);
+    float *vert = malloc(particleBytesAmount * particleAmount);
+
+    emitter *e;
+    particle *p;
+    for (int y = 0, j = 0; y < ps->eamount; y++)
+    {
+        e = (ps->emitters)[y];
+        for (int x = 0; x < e->pamount; x++)
+        {
+            p = e->particles[x];
+            // Position
+            vert[j++] = p->position->x;
+            vert[j++] = p->position->y;
+            vert[j++] = p->position->z;
+
+            // Direction
+            vert[j++] = p->direction->x;
+            vert[j++] = p->direction->y;
+            vert[j++] = p->direction->z;
+
+            // Color
+            vert[j++] = p->color->x;
+            vert[j++] = p->color->y;
+            vert[j++] = p->color->z;
+
+            // Age
+            vert[j++] = p->age;
+        }
+    }
+
+    return vert;
 }
