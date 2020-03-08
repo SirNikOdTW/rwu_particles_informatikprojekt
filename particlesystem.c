@@ -1,6 +1,5 @@
 #include <malloc.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "particlesystem.h"
 
@@ -11,7 +10,7 @@ particle *initParticle(vector3f *pos, vector3f *dir, vector3f *color, float age)
 {
     particle *p = malloc(sizeof(particle));
     p->position = pos;
-    p->direction = dir;
+    p->velocity = dir;
     p->color = color;
     p->age = age;
     return p;
@@ -74,9 +73,9 @@ void resetParticle(emitter *e, particle *p)
     p->position->y = e->position->y;
     p->position->z = e->position->z;
 
-    p->direction->x = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
-    p->direction->y = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
-    p->direction->z = ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX;
+    p->velocity->x = ((float) (rand() % 2 ? -1 : 1) * rand()) / RAND_MAX;
+    p->velocity->y = ((float) (rand() % 2 ? -1 : 1) * rand()) / RAND_MAX;
+    p->velocity->z = ((float) (rand() % 2 ? -1 : 1) * rand()) / RAND_MAX;
 
     p->age = rand() / 10;
 }
@@ -108,7 +107,7 @@ vector3f *initVector3f(float x, float y, float z)
 void freeParticle(particle *p)
 {
     free(p->position);
-    free(p->direction);
+    free(p->velocity);
     free(p->color);
     free(p);
 }
@@ -175,9 +174,9 @@ float *serializeParticlesystem(particle_system *ps)
             vert[j++] = p->position->z;
 
             // Direction
-            vert[j++] = p->direction->x;
-            vert[j++] = p->direction->y;
-            vert[j++] = p->direction->z;
+            vert[j++] = p->velocity->x;
+            vert[j++] = p->velocity->y;
+            vert[j++] = p->velocity->z;
 
             // Color
             vert[j++] = p->color->x;

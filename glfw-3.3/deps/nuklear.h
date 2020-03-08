@@ -7043,7 +7043,7 @@ nk_vsnprintf(char *buf, int buf_size, const char *fmt, va_list args)
                 num_print--;
             }
 
-            /* reverse number direction */
+            /* reverse number velocity */
             while (num_len > 0) {
                 if (precision && (len < buf_size))
                     buf[len++] = number_buffer[num_len-1];
@@ -12349,7 +12349,7 @@ nk_tt__oversample_shift(int oversample)
     /* The prefilter is a box filter of width "oversample", */
     /* which shifts phase by (oversample - 1)/2 pixels in */
     /* oversampled space. We want to shift in the opposite */
-    /* direction to counter this. */
+    /* velocity to counter this. */
     return (float)-(oversample - 1) / (2.0f * (float)oversample);
 }
 NK_INTERN int
@@ -15959,14 +15959,14 @@ nk_panel_end(struct nk_context *ctx)
                     delta_x = -delta_x;
                     window->bounds.x += in->mouse.delta.x;
                 }
-                /* dragging in x-direction  */
+                /* dragging in x-velocity  */
                 if (window->bounds.w + delta_x >= window_size.x) {
                     if ((delta_x < 0) || (delta_x > 0 && in->mouse.pos.x >= scaler.x)) {
                         window->bounds.w = window->bounds.w + delta_x;
                         scaler.x += in->mouse.delta.x;
                     }
                 }
-                /* dragging in y-direction (only possible if static window) */
+                /* dragging in y-velocity (only possible if static window) */
                 if (!(layout->flags & NK_WINDOW_DYNAMIC)) {
                     if (window_size.y < window->bounds.h + in->mouse.delta.y) {
                         if ((in->mouse.delta.y < 0) || (in->mouse.delta.y > 0 && in->mouse.pos.y >= scaler.y)) {
@@ -25371,7 +25371,7 @@ nk_tooltipfv(struct nk_context *ctx, const char *fmt, va_list args)
 /// - 2016/09/15 (1.21.2)- Fixed panel `close` behavior for deeper panel levels
 /// - 2016/09/15 (1.21.1)- Fixed C++ errors and wrong argument to `nk_panel_get_xxxx`
 /// - 2016/09/13 (1.21.0) - !BREAKING! Fixed nonblocking popup behavior in menu, combo,
-///                        and contextual which prevented closing in y-direction if
+///                        and contextual which prevented closing in y-velocity if
 ///                        popup did not reach max height.
 ///                        In addition the height parameter was changed into vec2
 ///                        for width and height to have more control over the popup size.

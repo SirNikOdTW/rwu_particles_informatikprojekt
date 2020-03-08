@@ -21,4 +21,8 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 void initVertexBufferObject(unsigned int *VBO, float *vertices);
 void initVertexArrayBuffer(unsigned int *VAO);
 
+GLuint compileShader(const GLchar *shaderSource, GLenum shaderType);
+GLuint linkShaders(GLuint *shaders, GLsizei count);
+void deleteShaders(GLuint *shaders, GLsizei count);
+
 #endif //INFORMATIKPROJEKT_INITOPENGL_H

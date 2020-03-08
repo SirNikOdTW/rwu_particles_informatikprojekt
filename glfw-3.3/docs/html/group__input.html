@@ -1665,7 +1665,7 @@ Functions</h2></td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>GLFW_HAT_LEFT_DOWN</code>  </td><td class="markdownTableBodyNone"><code>GLFW_HAT_LEFT</code> | <code>GLFW_HAT_DOWN</code>   </td></tr>
 </table>
-<p>The diagonal directions are bitwise combinations of the primary (up, right, down and left) directions and you can test for these individually by ANDing it with the corresponding direction.</p>
+<p>The diagonal directions are bitwise combinations of the primary (up, right, down and left) directions and you can test for these individually by ANDing it with the corresponding velocity.</p>
 <div class="fragment"><div class="line"><span class="keywordflow">if</span> (hats[2] &amp; <a class="code" href="group__hat__state.html#ga252586e3bbde75f4b0e07ad3124867f5">GLFW_HAT_RIGHT</a>)</div><div class="line">{</div><div class="line">    <span class="comment">// State of hat 2 could be right-up, right or right-down</span></div><div class="line">}</div></div><!-- fragment --><p>If the specified joystick is not present this function will return <code>NULL</code> but will not generate an error. This can be used instead of first calling <a class="el" href="group__input.html#gaed0966cee139d815317f9ffcba64c9f1">glfwJoystickPresent</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">

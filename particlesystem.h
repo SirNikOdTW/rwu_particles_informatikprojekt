@@ -9,12 +9,12 @@ typedef struct vector3f
 } vector3f;
 
 /*
- * A particle has a position and a direction
+ * A particle has a position and a velocity
  */
 typedef struct particle
 {
     vector3f *position;
-    vector3f *direction;
+    vector3f *velocity;
     vector3f *color;
     float age;
 } particle;

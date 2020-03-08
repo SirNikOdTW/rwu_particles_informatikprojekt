@@ -620,7 +620,7 @@ Name                  | Value
 
 The diagonal directions are bitwise combinations of the primary (up, right, down
 and left) directions and you can test for these individually by ANDing it with
-the corresponding direction.
+the corresponding velocity.
 
 @code
 if (hats[2] & GLFW_HAT_RIGHT)

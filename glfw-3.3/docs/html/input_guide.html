@@ -260,7 +260,7 @@ Joystick hat states</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>GLFW_HAT_LEFT_DOWN</code>  </td><td class="markdownTableBodyNone"><code>GLFW_HAT_LEFT</code> | <code>GLFW_HAT_DOWN</code>   </td></tr>
 </table>
-<p>The diagonal directions are bitwise combinations of the primary (up, right, down and left) directions and you can test for these individually by ANDing it with the corresponding direction.</p>
+<p>The diagonal directions are bitwise combinations of the primary (up, right, down and left) directions and you can test for these individually by ANDing it with the corresponding velocity.</p>
 <div class="fragment"><div class="line"><span class="keywordflow">if</span> (hats[2] &amp; <a class="code" href="group__hat__state.html#ga252586e3bbde75f4b0e07ad3124867f5">GLFW_HAT_RIGHT</a>)</div><div class="line">{</div><div class="line">    <span class="comment">// State of hat 2 could be right-up, right or right-down</span></div><div class="line">}</div></div><!-- fragment --><p>For backward compatibility with earlier versions that did not have <a class="el" href="group__input.html#ga2d8d0634bb81c180899aeb07477a67ea">glfwGetJoystickHats</a>, all hats are by default also included in the button array. See the reference documentation for <a class="el" href="group__input.html#gadb3cbf44af90a1536f519659a53bddd6">glfwGetJoystickButtons</a> for details.</p>
 <h2><a class="anchor" id="joystick_name"></a>
 Joystick name</h2>

@@ -34,163 +34,136 @@ int main()
     initGlad();
 
     /************* PARTICLE SYSTEM *************/
-    int particelAmount = 10000;
+    int particleAmount = 10000;
     vector3f *epos1 = initVector3f(0, 0, 0);
-    emitter *e1 = initEmitter(epos1, particelAmount);
-
+    emitter *e1 = initEmitter(epos1, particleAmount);
     particle_system *ps = initParticleSystem(1);
     (ps->emitters)[0] = e1;
-
     initRandomParticles(e1);
 
-    /************* COMPILING SHADER *************/
-    const char *vertexShaderSource = "#version 460 core\n"
-                                     "\n"
-                                     "layout (location = 0) in vec3 pos;   // the position variable has attribute position 0\n"
-                                     "layout (location = 1) in vec3 dir; // the direction variable has attribute position 1\n"
-                                     "layout (location = 2) in vec3 col; // the color variable has attribute position 2\n"
-                                     "layout (location = 3) in float age; // the age variable has attribute position 3\n"
-                                     "\n"
-                                     "//in vec3 emitterPos; // the emitter pos variable\n"
-                                     "//in float newAge; // the age variable\n"
-                                     "\n"
-                                     "out vec3 outCol; // output a color to the fragment shader\n"
-                                     "\n"
-                                     "void main()\n"
-                                     "{\n"
-                                     "    if (age < 0)\n"
-                                     "    {\n"
-                                     "        //pos = vec3(0, 0, 0); //emitterPos;\n"
-                                     "        //age = 200; //newAge;\n"
-                                     "    }\n"
-                                     "\n"
-                                     "    age -= 0.1f;\n"
-                                     "    vec3 newPos = pos.xyz + dir.xyz;\n"
-                                     "    gl_Position = vec4(newPos, 1.0);\n"
-                                     "\n"
-                                     "    outCol = col; // set ourColor to the input color we got from the vertex data\n"
-                                     "}";
+    /************* SHADER *************/
+    const GLchar *computeShaderSource = "#version 460 core\n"
+                                        "#extension GL_ARB_compute_shader : enable\n"
+                                        "#extension GL_ARB_shader_storage_buffer_object : enable\n"
+                                        "\n"
+                                        "struct particle\n"
+                                        "{\n"
+                                        "    vec3  pos;\n"
+                                        "    vec3  vel;\n"
+                                        "    vec3  col;\n"
+                                        "    float age;\n"
+                                        "};\n"
+                                        "\n"
+                                        "layout(std430, binding=0) buffer particles\n"
+                                        "{\n"
+                                        "    particle p[];\n"
+                                        "};\n"
+                                        "\n"
+                                        "layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;\n"
+                                        "\n"
+                                        "void main()\n"
+                                        "{\n"
+                                        "    uint gid = gl_GlobalInvocationID.x;\n"
+                                        "    particle part = p[gid];\n"
+                                        "\n"
+                                        "    if (part.age > 0)\n"
+                                        "    {\n"
+                                        "        part.pos += part.vel;\n"
+                                        "        part.age -= 0.01f;\n"
+                                        "    }\n"
+                                        "    else\n"
+                                        "    {\n"
+                                        "        part.pos = vec3(0, 0, 0);\n"
+                                        "    }\n"
+                                        "    \n"
+                                        "    p[gid] = part;\n"
+                                        "}";
 
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-
-    int  successCompileVertex;
-    char infoLogCompileVertex[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &successCompileVertex);
-    if (!successCompileVertex)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLogCompileVertex);
-        printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s", infoLogCompileVertex);
-    }
-
-    const char *fragmentShaderSource = "#version 460 core\n"
+    const GLchar *vertexShaderSource = "#version 460 core\n"
                                        "\n"
-                                       "in vec3 col; // the input variable from the vertex shader (same name and same type)\n"
+                                       "layout(location=0) in vec4 pos;\n"
                                        "\n"
-                                       "out vec4 outCol;\n"
-                                       "\n"
-                                       "void main()\n"
+                                       "void main(void)\n"
                                        "{\n"
-                                       "    outCol = vec4(col, 1.0);\n"
+                                       "    gl_Position = pos;\n"
                                        "}";
 
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
+    const GLchar *geometryShaderSource = "#version 460 core\n"
+                                         "\n"
+                                         "layout(points) in;\n"
+                                         "layout(points, max_vertices = 256) out;\n"
+                                         "\n"
+                                         "void main(void)\n"
+                                         "{\n"
+                                         "}";
 
-    int  successCompileFragment;
-    char infoLogCompileFragment[512];
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &successCompileFragment);
-    if (!successCompileFragment)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLogCompileFragment);
-        printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s", infoLogCompileFragment);
-    }
+    const GLchar *fragmentShaderSource = "#version 460 core\n"
+                                         "\n"
+                                         "out vec4 colOut;\n"
+                                         "\n"
+                                         "void main(void)\n"
+                                         "{\n"
+                                         "    colOut = vec4(1, 1, 1, 1);\n"
+                                         "}";
 
-    /************* LINKING SHADER *************/
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    GLuint computeShader = compileShader(computeShaderSource, GL_COMPUTE_SHADER);
+    GLuint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
+    GLuint geometryShader = compileShader(geometryShaderSource, GL_GEOMETRY_SHADER);
+    GLuint fragmentShader = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 
-    int successLink;
-    char infoLogLink[512];
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &successLink);
-    if (!successLink)
-    {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLogLink);
-        printf("ERROR::SHADER::LINKING_FAILED\n%s", infoLogLink);
-    }
+    GLuint computeShaders[] = { computeShader };
+    GLuint computeShaderProgram = linkShaders(computeShaders, 1);
+    GLuint renderShaders[] = { vertexShader, geometryShader, fragmentShader };
+    GLuint renderShaderProgram = linkShaders(renderShaders, 3);
 
-    /*************** VAO / VBO ***************/
-    // Init vertex data
-    unsigned int vao, vbo;
-    float *vertexData = serializeParticlesystem(ps);
-    initVertexArrayBuffer(&vao);
-    initVertexBufferObject(&vbo, vertexData);
+    particle *particles = ps->emitters[0]->particles[0]; // Only this atm
 
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)0);
+    GLuint particleBuffer;
+    glGenBuffers(1, &particleBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleBuffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, particleAmount * sizeof(particle), particles, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleBuffer);
+
+    GLuint vertexArray;
+    glGenVertexArrays(1, &vertexArray);
+    glBindVertexArray(vertexArray);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleBuffer);
     glEnableVertexAttribArray(0);
-    // direction attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    // color attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    // age attribute
-    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(9 * sizeof(float)));
-    glEnableVertexAttribArray(3);
+    glBindBuffer(GL_ARRAY_BUFFER, particleBuffer);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(particle), 0);
+    glBindVertexArray(0);
 
     /************* RENDER LOOP *************/
     double time, tFrame, tLast = 0;
+    int isFirst = 1;
     while (!glfwWindowShouldClose(window))
     {
         time = glfwGetTime();
         tFrame = time - tLast;
         tLast = time;
 
+        /*** UPDATE ***/
+        glUseProgram(computeShaderProgram);
+        glDispatchCompute((particleAmount / 256) + 1, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+
+        /*** RENDER ***/
         glClear(GL_COLOR_BUFFER_BIT);
         glfwGetFramebufferSize(window, &width, &height);
 
-        glUseProgram(shaderProgram);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_POINTS, 0, particelAmount);
-
-        /*updateParticles((float) tFrame, ps, calcPos, calcCol);
-
-        emitter *e;
-        particle *p;
-        vector3f *pos;
-        for (int j = 0; j < ps->eamount; j++)
-        {
-            e = (ps->emitters)[j];
-            for (int i = 0; i < e->pamount; i++)
-            {
-                p = (e->particles)[i];
-                pos = p->position;
-
-                glColor3f(p->color->x, p->color->y, p->color->z);
-                glBegin(GL_POINTS);
-                glVertex3f(pos->x, pos->y, pos->z);
-                glEnd();
-            }
-        }*/
+        glUseProgram(renderShaderProgram);
+        glDrawArrays(GL_POINTS, 0, particleAmount);
+        glBindVertexArray(0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     //END
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    deleteShaders(renderShaders, 3);
+    deleteShaders(computeShaders, 1);
 
     terminateGLFW(window);
-
     freeParticleSystem(ps);
 
     return 0;
@@ -198,9 +171,9 @@ int main()
 
 void calcPos(particle *p, float dt)
 {
-    p->position->x += p->direction->x * dt;
-    p->position->y += p->direction->y * dt;
-    p->position->z += p->direction->z * dt;
+    p->position->x += p->velocity->x * dt;
+    p->position->y += p->velocity->y * dt;
+    p->position->z += p->velocity->z * dt;
 }
 
 void calcCol(particle *p)
@@ -226,30 +199,84 @@ void initRandomParticles(emitter *e)
     }
 }
 
-char *printVector(vector3f *v)
-{
-    char *c = malloc(100);
-    sprintf(c, "(%f, %f, %f)", v->x, v->y, v->z);
-    return c;
-}
+/// VERY OLD
+//        glUseProgram(shaderProgram);
+//        glBindVertexArray(vao);
+//        glDrawArrays(GL_POINTS, 0, particleAmount);
 
-void printParticle(particle *v)
-{
-    printf("   Particle {\n");
-    printf("      position = %s", printVector(v->position));
-    printf("\n      direction = %s", printVector(v->direction));
-    printf("\n   }");
-}
+//        updateParticles((float) tFrame, ps, calcPos, calcCol);
+//
+//        emitter *e;
+//        particle *p;
+//        vector3f *pos;
+//        for (int j = 0; j < ps->eamount; j++)
+//        {
+//            e = (ps->emitters)[j];
+//            for (int i = 0; i < e->pamount; i++)
+//            {
+//                p = (e->particles)[i];
+//                pos = p->position;
+//
+//                glColor3f(p->color->x, p->color->y, p->color->z);
+//                glBegin(GL_POINTS);
+//                glVertex3f(pos->x, pos->y, pos->z);
+//                glEnd();
+//            }
+//        }
 
-void printEmitter(emitter *e)
-{
-    printf("Emitter {\n");
+/// FEEDBACK TRANSFORM BEFORE
+//    /*************** NEW ***************/
+//    float *vertexData = serializeParticlesystem(ps);
+//    unsigned int currentVertexBuffer = 0, currentTransformFeedbackBuffer = 1;
+//    int buffersSize = 2;
+//    unsigned int particleBuffers[buffersSize], transformFeedbackBuffers[buffersSize];
+//
+//    glGenTransformFeedbacks(buffersSize, transformFeedbackBuffers);
+//    glGenBuffers(buffersSize, particleBuffers);
+//
+//    for (int i = 0; i < buffersSize; i++)
+//    {
+//        glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transformFeedbackBuffers[i]);
+//        glBindBuffer(GL_ARRAY_BUFFER, particleBuffers[i]);
+//        glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_DYNAMIC_DRAW);
+//        glBindBufferBase(GL_TRANSFORM_FEEDBACK, 0, particleBuffers[i]);
+//    }
 
-    for (int i = 0; i < e->pamount; i++)
-    {
-        printParticle((e->particles)[i]);
-        printf("\n");
-    }
+//    // position attribute
+//    glEnableVertexAttribArray(0);
+//    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)0);
+//    // velocity attribute
+//    glEnableVertexAttribArray(1);
+//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(3 * sizeof(float)));
+//    // color attribute
+//    glEnableVertexAttribArray(2);
+//    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(6 * sizeof(float)));
+//    // age attribute
+//    glEnableVertexAttribArray(3);
+//    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(9 * sizeof(float)));
 
-    printf("\n}");
-}
+/// TRANSFORM FEEDBACK RENDER LOOP
+///*** UPDATE PARTICLES ***/
+//glEnable(GL_RASTERIZER_DISCARD);
+//glBindBuffer(GL_ARRAY_BUFFER, particleBuffers[currentVertexBuffer]);
+//glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transformFeedbackBuffers[currentTransformFeedbackBuffer]);
+//glBeginTransformFeedback(GL_POINTS);
+//if (isFirst)
+//{
+//glDrawArrays(GL_POINTS, 0, particleAmount);
+//isFirst = !isFirst;
+//}
+//else
+//{
+//glDrawTransformFeedback(GL_POINTS, transformFeedbackBuffers[currentVertexBuffer]);
+//}
+//glEndTransformFeedback();
+//
+///*** RENDER PARTICLES ***/
+//glDisable(GL_RASTERIZER_DISCARD);
+//glBindBuffer(GL_ARRAY_BUFFER, particleBuffers[currentTransformFeedbackBuffer]);
+//glDrawTransformFeedback(GL_POINTS, transformFeedbackBuffers[currentTransformFeedbackBuffer]);
+//
+///***************************************************/
+//currentVertexBuffer = currentTransformFeedbackBuffer;
+//currentTransformFeedbackBuffer = !currentTransformFeedbackBuffer;

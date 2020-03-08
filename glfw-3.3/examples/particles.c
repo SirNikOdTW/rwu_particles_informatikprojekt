@@ -252,7 +252,7 @@ static void init_particle(PARTICLE *p, double t)
     // Start velocity is up (Z)...
     p->vz = 0.7f + (0.3f / 4096.f) * (float) (rand() & 4095);
 
-    // ...and a randomly chosen X/Y direction
+    // ...and a randomly chosen X/Y velocity
     xy_angle = (2.f * (float) M_PI / 4096.f) * (float) (rand() & 4095);
     p->vx = 0.4f * (float) cos(xy_angle);
     p->vy = 0.4f * (float) sin(xy_angle);
