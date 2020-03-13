@@ -53,7 +53,7 @@ int updateParticles(float dt, particle_system *ps, CalculatePositionFunction cal
         {
             p = (e->particles)[j];
 
-            if (p->age < 0)
+            if (p->age < 0 || p->position->x > 1 || p->position->y > 1 || p->position->z > 1)
             {
                 resetParticle(e, p);
             }
