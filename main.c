@@ -6,6 +6,10 @@
 #include "particlesystem.h"
 #include "initOpenGL.h"
 
+#define PARTICLE_AMOUNT 10000
+#define WIDTH 800
+#define HEIGHT 800
+
 void printVector(vector3f *v);
 void printParticle(particle *v);
 void printEmitter(emitter *e);
@@ -17,14 +21,13 @@ void calcCol(particle *p);
 
 int main()
 {
-
     /************* INIT *************/
     // Init OpenGL and GLFW
     initGLFW();
     setErrorCallbackGL();
 
-    int width = 800, height = 800;
-    GLFWwindow *window = createGLFWWindow(width, height, "Informatikprojekt - OpenGL");
+    int width = WIDTH, height = HEIGHT;
+    GLFWwindow *window = createGLFWWindow(WIDTH, HEIGHT, "Informatikprojekt - OpenGL");
 
     setCurrentContextGL(window);
     setFramebufferSizeCallbackGL(window);
@@ -33,15 +36,16 @@ int main()
     initGlad();
 
     /************* PARTICLE SYSTEM *************/
-    int particleAmount = 10000;
     vector3f *epos1 = initVector3f(0, 0, 0);
-    emitter *e1 = initEmitter(epos1, particleAmount);
+    emitter *e1 = initEmitter(epos1, PARTICLE_AMOUNT);
     particle_system *ps = initParticleSystem(1);
     (ps->emitters)[0] = e1;
     initRandomParticles(e1);
 
     /************* SHADER *************/
-    const GLchar *computeShaderSource = "#version 460\n"
+    const GLchar *computeShaderSource = "#version 460 core\n"
+                                        "#extension GL_ARB_compute_shader : enable\n"
+                                        "#extension GL_ARB_shader_storage_buffer_object : enable\n"
                                         "\n"
                                         "struct particle\n"
                                         "{\n"
@@ -51,28 +55,54 @@ int main()
                                         "    float age;\n"
                                         "};\n"
                                         "\n"
-                                        "layout(std430, binding=0) buffer particles\n"
+                                        "layout(std430, binding = 0) buffer particles\n"
                                         "{\n"
                                         "    particle p[];\n"
                                         "};\n"
                                         "\n"
                                         "uniform float dt;\n"
+                                        "uniform vec3 resetPos;\n"
+                                        "uniform uint seed;\n"
                                         "\n"
                                         "layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;\n"
+                                        "\n"
+                                        "float rand()\n"
+                                        "{\n"
+                                        "    uint seedR;\n"
+                                        "    seedR = (seed * 1103515245u + 12345u);\n"
+                                        "    return float(seed) / 4294967296.0;\n"
+                                        "}\n"
+                                        "\n"
+                                        "vec3 rand3() {\n"
+                                        "    vec3 result;\n"
+                                        "    uint seedR;\n"
+                                        "    seedR = (seed * 1103515245u + 12345u);\n"
+                                        "    result.x = float(seed);\n"
+                                        "    seedR = (seed * 1103515245u + 12345u);\n"
+                                        "    result.y = float(seed);\n"
+                                        "    seedR = (seed * 1103515245u + 12345u);\n"
+                                        "    result.z = float(seed);\n"
+                                        "    return (result / 2147483648.0) - vec3(1,1,1);\n"
+                                        "}\n"
                                         "\n"
                                         "void main()\n"
                                         "{\n"
                                         "    uint gid = gl_GlobalInvocationID.x;\n"
                                         "    particle part = p[gid];\n"
                                         "\n"
-                                        "    if (part.age > 0 || part.pos.x > 1 || part.pos.y > 1 || part.pos.z > 1)\n"
+                                        "    if (part.age < 0 || part.pos.x > 1 || part.pos.y > 1 || part.pos.z > 1\n"
+                                        "        || part.pos.x < -1 || part.pos.y < -1 || part.pos.z < -1 )\n"
                                         "    {\n"
-                                        "        part.pos += part.vel * dt;\n"
-                                        "        part.age -= 0.01f;\n"
+                                        "        part.pos = resetPos;\n"
+                                        "        //part.vel = rand3();\n"
+                                        "        //part.col = vec3(rand(), rand(), rand());\n"
+                                        "        //part.age = rand() * 0x7fff * 0.01f;\n"
+                                        "        \n"
                                         "    }\n"
                                         "    else\n"
                                         "    {\n"
-                                        "        part.pos = vec3(0, 0, 0);\n"
+                                        "        part.pos += part.vel * dt;\n"
+                                        "        part.age -= 0.01f;\n"
                                         "    }\n"
                                         "\n"
                                         "    p[gid] = part;\n"
@@ -83,49 +113,38 @@ int main()
                                        "layout(location = 0) in vec3 pos;\n"
                                        "layout(location = 1) in vec3 colIn;\n"
                                        "\n"
-                                       "//out vec3 colV;\n"
+                                       "out vec3 colV;\n"
                                        "\n"
                                        "void main(void)\n"
                                        "{\n"
-                                       "    //colV = colIn;\n"
-                                       "    gl_Position = vec4(pos, 0);\n"
+                                       "    colV = colIn;\n"
+                                       "    gl_Position = vec4(pos, 1);\n"
                                        "}";
 
-//    const GLchar *geometryShaderSource = "#version 460 core\n"
-//                                         "\n"
-//                                         "layout(points) in;\n"
-//                                         "layout(points, max_vertices = 256) out;\n"
-//                                         "\n"
-//                                         "in vec3 colV;\n"
-//                                         "out vec3 colG;\n"
-//                                         "\n"
-//                                         "void main(void)\n"
-//                                         "{\n"
-//                                         "    colG = colV;\n"
-//                                         "}";
-
-//    const GLchar *fragmentShaderSource = "#version 460 core\n"
-//                                         "\n"
-//                                         "in vec3 colG;\n"
-//                                         "out vec4 colOut;\n"
-//                                         "\n"
-//                                         "void main(void)\n"
-//                                         "{\n"
-//                                         "    colOut = vec4(colG, 1);\n"
-//                                         "}";
+    const GLchar *fragmentShaderSource = "#version 460 core\n"
+                                         "\n"
+                                         "in vec3 colV;\n"
+                                         "out vec4 colOut;\n"
+                                         "\n"
+                                         "void main(void)\n"
+                                         "{\n"
+                                         "    colOut = vec4(colV, 1);\n"
+                                         "}";
 
     GLuint computeShader = compileShader(computeShaderSource, GL_COMPUTE_SHADER);
     GLuint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
-//    GLuint geometryShader = compileShader(geometryShaderSource, GL_GEOMETRY_SHADER);
-//    GLuint fragmentShader = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
+    GLuint fragmentShader = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 
     GLuint computeShaders[] = { computeShader };
     GLuint computeShaderProgram = linkShaders(computeShaders, 1);
     glUseProgram(computeShaderProgram);
     GLint dtUniformLocation = glGetUniformLocation(computeShaderProgram, "dt");
+    GLint resetPosUniformLocation = glGetUniformLocation(computeShaderProgram, "resetPos");
+    GLint seedUniformLocation = glGetUniformLocation(computeShaderProgram, "seed");
+    glUniform3f(resetPosUniformLocation, e1->position->x, e1->position->y, e1->position->z);
 
-    GLuint renderShaders[] = { vertexShader/*, geometryShader, fragmentShader*/ };
-    GLuint renderShaderProgram = linkShaders(renderShaders, 1/*3*/);
+    GLuint renderShaders[] = { vertexShader, fragmentShader };
+    GLuint renderShaderProgram = linkShaders(renderShaders, 2);
 
     float *particles = serializeParticlesystem(ps);
     GLsizeiptr sizeOfParticle = 3 * sizeof(vector3f) + sizeof(float);
@@ -133,7 +152,7 @@ int main()
     GLuint particleBuffer;
     glGenBuffers(1, &particleBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleBuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, particleAmount * sizeOfParticle, particles, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, PARTICLE_AMOUNT * sizeOfParticle, particles, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -161,46 +180,24 @@ int main()
         /*** UPDATE ***/
         glUseProgram(computeShaderProgram);
         glUniform1f(dtUniformLocation, tFrame);
-        glDispatchCompute((particleAmount / 256) + 1, 1, 1);
+        glUniform1ui(seedUniformLocation, rand());
+        glDispatchCompute((PARTICLE_AMOUNT / 256) + 1, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 
         /*** RENDER ***/
         glClear(GL_COLOR_BUFFER_BIT);
         glfwGetFramebufferSize(window, &width, &height);
-
-        glColor3f(1, 1, 1);
         glBindVertexArray(vertexArray);
         glUseProgram(renderShaderProgram);
-        glDrawArrays(GL_POINTS, 0, particleAmount);
+        glDrawArrays(GL_POINTS, 0, PARTICLE_AMOUNT);
         glBindVertexArray(0);
-
-//        glClear(GL_COLOR_BUFFER_BIT);
-//        glfwGetFramebufferSize(window, &width, &height);
-//        updateParticles((float) tFrame, ps, calcPos, calcCol);
-//
-//        emitter *e;
-//        particle *p;
-//        vector3f *pos;
-//        for (int j = 0; j < ps->eamount; j++)
-//        {
-//            e = (ps->emitters)[j];
-//            for (int i = 0; i < e->pamount; i++)
-//            {
-//                p = (e->particles)[i];
-//                pos = p->position;
-//                glColor3f(p->color->x, p->color->y, p->color->z);
-//                glBegin(GL_POINTS);
-//                glVertex3f(pos->x, pos->y, pos->z);
-//                glEnd();
-//            }
-//        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     //END
-    deleteShaders(renderShaders, 3);
+    deleteShaders(renderShaders, 2);
     deleteShaders(computeShaders, 1);
 
     terminateGLFW(window);
