@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 project(Informatikprojekt C)
 
 set(CMAKE_C_STANDARD 11)
-set(PROJECT_SOURCES particlesystem.h particlesystem.c init.h initOpenGL.h initOpenGL.c glad/src/glad.c)
+set(PROJECT_SOURCES particlesystem.h particlesystem.c def.h)
+set(PROJECT_SOURCES_OPENGL ${PROJECT_SOURCES} initOpenGL.h initOpenGL.c def.h glad/src/glad.c)
+set(PROJECT_SOURCES_VULKAN ${PROJECT_SOURCES} initVulkan.h initVulkan.c)
 
-add_executable(Informatikprojekt cpuMain.c ${PROJECT_SOURCES})
-add_executable(Informatikprojekt_OpenGL openglMain.c ${PROJECT_SOURCES})
-add_executable(Informatikprojekt_Vulkan vulkanMain.c ${PROJECT_SOURCES})
+add_executable(Informatikprojekt cpuMain.c ${PROJECT_SOURCES_OPENGL})
+add_executable(Informatikprojekt_OpenGL openglMain.c ${PROJECT_SOURCES_OPENGL})
+add_executable(Informatikprojekt_Vulkan vulkanMain.c ${PROJECT_SOURCES_VULKAN})
 
 # Vulkan
 find_package(Vulkan REQUIRED)

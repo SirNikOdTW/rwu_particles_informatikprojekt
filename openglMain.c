@@ -1,9 +1,8 @@
 #include "particlesystem.h"
 #include "initOpenGL.h"
+#include "def.h"
 
 #define PARTICLE_AMOUNT 1000000
-#define WIDTH 800
-#define HEIGHT 800
 
 int main()
 {
