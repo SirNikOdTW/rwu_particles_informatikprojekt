@@ -1,3 +1,6 @@
+#define UPPER_AGE 250
+#define LOWER_AGE 60
+
 /*
  * A vector with three floats
  */
@@ -108,3 +111,8 @@ void freeParticleSystem(particle_system *ps);
  * Creates float array out of a particle system
  */
 float *serializeParticlesystem(particle_system *ps);
+
+/*
+ * Inits random particle
+ */
+void initRandomParticles(emitter *e);

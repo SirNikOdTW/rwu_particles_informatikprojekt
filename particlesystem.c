@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "particlesystem.h"
 
@@ -158,7 +159,7 @@ float *serializeParticlesystem(particle_system *ps)
     }
 
     unsigned long particleBytesAmount = sizeof(vector3f) * 3 + sizeof(float);
-    float *vert = malloc(particleBytesAmount * particleAmount);
+    float *vert = malloc(particleAmount *  particleBytesAmount);
 
     emitter *e;
     particle *p;
@@ -168,6 +169,7 @@ float *serializeParticlesystem(particle_system *ps)
         for (int x = 0; x < e->pamount; x++)
         {
             p = e->particles[x];
+
             // Position
             vert[j++] = p->position->x;
             vert[j++] = p->position->y;
@@ -189,4 +191,22 @@ float *serializeParticlesystem(particle_system *ps)
     }
 
     return vert;
+}
+
+/*
+ * Inits random particles
+ */
+void initRandomParticles(emitter *e)
+{
+    for (int i = 0; i < e->pamount; i++)
+    {
+        vector3f *pos = initVector3f(e->position->x, e->position->y, e->position->z);
+        vector3f *dir = initVector3f(((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX,
+                                     ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX,
+                                     ((float) (rand()%2 ? -1 : 1) * rand()) / RAND_MAX);
+        vector3f *color = initVector3f(((float) (rand() % 255)) / 255,
+                                       ((float) (rand() % 255)) / 255,
+                                       ((float) (rand() % 255)) / 255);
+        (e->particles)[i] = initParticle(pos, dir, color, (float) (rand() % (UPPER_AGE - LOWER_AGE + 1) + LOWER_AGE));
+    }
 }
