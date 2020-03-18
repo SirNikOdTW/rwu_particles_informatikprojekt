@@ -5,7 +5,7 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
 {
     // VkApplicationInfo
     VkApplicationInfo appInfo;
-    initAppInfo(&appInfo);
+    createAppInfo(&appInfo);
 
     // VkInstanceCreateInfo
     uint32_t  amountOfLayers;
@@ -14,7 +14,7 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
     vkEnumerateInstanceLayerProperties(&amountOfLayers, layers);
 
     VkInstanceCreateInfo instanceInfo;
-    initCreateInfo(&appInfo, &instanceInfo);
+    createInstanceInfo(&appInfo, &instanceInfo);
 
     // Vulkan Instance
     ASSERT_VK_SUCCESS(vkCreateInstance(&instanceInfo, NULL, vkInstance))
@@ -32,12 +32,12 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
 
     // Queue info
     VkDeviceQueueCreateInfo queueInfo;
-    initQueueInfo(&queueInfo);
+    createQueueInfo(&queueInfo);
 
     // Device info
     VkPhysicalDeviceFeatures usedFeatures = {};
     VkDeviceCreateInfo deviceInfo;
-    initDeviceInfo(&queueInfo, &deviceInfo, &usedFeatures);
+    createDeviceInfo(&queueInfo, &deviceInfo, &usedFeatures);
 
     // Logical device
     ASSERT_VK_SUCCESS(vkCreateDevice(physicalDevices[0], &deviceInfo, NULL, device))
@@ -57,7 +57,7 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
 
     // Swap chain info
     VkSwapchainCreateInfoKHR swapChainCreateInfo;
-    initSwapChainInfo(&swapChainCreateInfo, surface);
+    createSwapChainInfo(&swapChainCreateInfo, surface);
 
     // Swap chain
     ASSERT_VK_SUCCESS(vkCreateSwapchainKHR(*device, &swapChainCreateInfo, NULL, swapChain))
@@ -72,16 +72,14 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
     VkImageViewCreateInfo imageViewInfo;
     for (int i = 0; i < *amountImages; i++)
     {
-        initImageViewInfo(&imageViewInfo, swapChainImages, i);
+        createImageViewInfo(&imageViewInfo, swapChainImages, i);
         ASSERT_VK_SUCCESS(vkCreateImageView(*device, &imageViewInfo, NULL, &*imageViews[i]))
     }
-
-
 
     return SUCCESS;
 }
 
-void initAppInfo(VkApplicationInfo *appInfo)
+void createAppInfo(VkApplicationInfo *appInfo)
 {
     appInfo->sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo->pNext = NULL;
@@ -92,7 +90,7 @@ void initAppInfo(VkApplicationInfo *appInfo)
     appInfo->apiVersion = VK_API_VERSION_1_1;
 }
 
-void initCreateInfo(VkApplicationInfo *appInfo, VkInstanceCreateInfo *instanceInfo)
+void createInstanceInfo(VkApplicationInfo *appInfo, VkInstanceCreateInfo *instanceInfo)
 {
     GLuint amountOfGLFWExtensions;
     const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&amountOfGLFWExtensions);
@@ -107,7 +105,7 @@ void initCreateInfo(VkApplicationInfo *appInfo, VkInstanceCreateInfo *instanceIn
     instanceInfo->ppEnabledExtensionNames = glfwExtensions;
 }
 
-void initQueueInfo(VkDeviceQueueCreateInfo *queueInfo)
+void createQueueInfo(VkDeviceQueueCreateInfo *queueInfo)
 {
     queueInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueInfo->pNext = NULL;
@@ -117,7 +115,7 @@ void initQueueInfo(VkDeviceQueueCreateInfo *queueInfo)
     queueInfo->pQueuePriorities = NULL;
 }
 
-void initDeviceInfo(VkDeviceQueueCreateInfo *queueInfo, VkDeviceCreateInfo *deviceInfo, VkPhysicalDeviceFeatures *features)
+void createDeviceInfo(VkDeviceQueueCreateInfo *queueInfo, VkDeviceCreateInfo *deviceInfo, VkPhysicalDeviceFeatures *features)
 {
     const char *deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
@@ -133,7 +131,7 @@ void initDeviceInfo(VkDeviceQueueCreateInfo *queueInfo, VkDeviceCreateInfo *devi
     deviceInfo->pEnabledFeatures = features;
 }
 
-void initSwapChainInfo(VkSwapchainCreateInfoKHR *swapChainCreateInfo, VkSurfaceKHR *surface)
+void createSwapChainInfo(VkSwapchainCreateInfoKHR *swapChainCreateInfo, VkSurfaceKHR *surface)
 {
     VkExtent2D imageExtent = { WIDTH, HEIGHT };
 
@@ -157,7 +155,7 @@ void initSwapChainInfo(VkSwapchainCreateInfoKHR *swapChainCreateInfo, VkSurfaceK
     swapChainCreateInfo->oldSwapchain = VK_NULL_HANDLE;
 }
 
-void initImageViewInfo(VkImageViewCreateInfo *imageViewInfo, VkImage *swapChainImages, int index)
+void createImageViewInfo(VkImageViewCreateInfo *imageViewInfo, VkImage *swapChainImages, int index)
 {
     VkComponentMapping componentMapping = {
             VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -179,12 +177,33 @@ void initImageViewInfo(VkImageViewCreateInfo *imageViewInfo, VkImage *swapChainI
     imageViewInfo->subresourceRange = subresourceRange;
 }
 
+void createAttachmentDescription(VkAttachmentDescription *attachmentDescription)
+{
+    attachmentDescription->flags = 0;
+    attachmentDescription->format = VK_FORMAT_B8G8R8A8_UNORM;
+    attachmentDescription->samples = VK_SAMPLE_COUNT_1_BIT;
+    attachmentDescription->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescription->stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription->stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescription->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachmentDescription->finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+}
+
 void shutdownVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, VkSwapchainKHR *swapChain,
-                    VkImageView *imageViews, uint32_t amountImages)
+                    VkImageView *imageViews, uint32_t imagesSize, VkShaderModule *modules, uint32_t shaderModulesSize,
+                    VkPipelineLayout *pipelineLayout)
 {
     vkDeviceWaitIdle(*device);
 
-    for (int i = 0; i < amountImages; i++)
+    vkDestroyPipelineLayout(*device, *pipelineLayout, NULL);
+
+    for (int i = 0; i < shaderModulesSize; ++i)
+    {
+        vkDestroyShaderModule(*device, modules[i], NULL);
+    }
+
+    for (int i = 0; i < imagesSize; i++)
     {
         vkDestroyImageView(*device, imageViews[i], NULL);
     }
@@ -199,6 +218,140 @@ void shutdownGLFW(GLFWwindow *window)
 {
     glfwDestroyWindow(window);
     glfwTerminate();
+}
+
+int createShaderModule(VkDevice device, VkShaderModule *shaderModule, const char *shaderSource, long sourceSize)
+{
+    VkShaderModuleCreateInfo shaderModuleInfo;
+    shaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shaderModuleInfo.pNext = NULL;
+    shaderModuleInfo.flags = 0;
+    shaderModuleInfo.codeSize = sourceSize;
+    shaderModuleInfo.pCode = (uint32_t *) shaderSource;
+
+    ASSERT_VK_SUCCESS(vkCreateShaderModule(device, &shaderModuleInfo, NULL, shaderModule))
+
+    return SUCCESS;
+}
+
+void createShaderStageInfo(VkPipelineShaderStageCreateInfo *shaderStageInfo, VkShaderStageFlagBits shaderStageBit, VkShaderModule shaderModule, const char *entryPointName)
+{
+    shaderStageInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStageInfo->pNext = NULL;
+    shaderStageInfo->flags = 0;
+    shaderStageInfo->stage = shaderStageBit;
+    shaderStageInfo->module = shaderModule;
+    shaderStageInfo->pName = entryPointName;
+    shaderStageInfo->pSpecializationInfo = NULL;
+}
+
+void createPipelineVertexInputStateInfo(VkPipelineVertexInputStateCreateInfo *vertexInputStateInfo, VkVertexInputAttributeDescription *attributes, uint32_t atrributesSize)
+{
+    vertexInputStateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputStateInfo->pNext = NULL;
+    vertexInputStateInfo->flags = 0;
+    vertexInputStateInfo->vertexBindingDescriptionCount = 0;
+    vertexInputStateInfo->pVertexBindingDescriptions = NULL;
+    vertexInputStateInfo->vertexAttributeDescriptionCount = atrributesSize;
+    vertexInputStateInfo->pVertexAttributeDescriptions = attributes;
+}
+
+void createInputAssemblyStateInfo(VkPipelineInputAssemblyStateCreateInfo *inputAssemblyStateInfo, VkPrimitiveTopology topology)
+{
+    inputAssemblyStateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyStateInfo->pNext = NULL;
+    inputAssemblyStateInfo->flags = 0;
+    inputAssemblyStateInfo->topology = topology;
+    inputAssemblyStateInfo->primitiveRestartEnable = VK_FALSE;
+}
+
+void createViewportStateInfo(VkPipelineViewportStateCreateInfo *viewportStateInfo, float width, float height)
+{
+    VkViewport viewport;
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = width;
+    viewport.height = height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = { {0, 0}, {width, height} };
+
+    viewportStateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateInfo->pNext = NULL;
+    viewportStateInfo->flags = 0;
+    viewportStateInfo->viewportCount = 1;
+    viewportStateInfo->pViewports = &viewport;
+    viewportStateInfo->scissorCount = 1;
+    viewportStateInfo->pScissors = &scissor;
+}
+
+void createRasterizationStateInfo(VkPipelineRasterizationStateCreateInfo *rasterizationStateInfo, VkPolygonMode polygonMode)
+{
+    rasterizationStateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationStateInfo->pNext = NULL;
+    rasterizationStateInfo->flags = 0;
+    rasterizationStateInfo->depthClampEnable = VK_FALSE;
+    rasterizationStateInfo->rasterizerDiscardEnable = VK_FALSE;
+    rasterizationStateInfo->polygonMode = polygonMode;
+    rasterizationStateInfo->cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizationStateInfo->frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationStateInfo->depthBiasEnable = VK_FALSE;
+    rasterizationStateInfo->depthBiasConstantFactor = 0.0f;
+    rasterizationStateInfo->depthBiasClamp = 0.0f;
+    rasterizationStateInfo->depthBiasSlopeFactor = 0.0f;
+    rasterizationStateInfo->lineWidth = 1.0f;
+}
+
+void createMultisampleStateInfo(VkPipelineMultisampleStateCreateInfo *multisampleStateInfo)
+{
+    multisampleStateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampleStateInfo->pNext = NULL;
+    multisampleStateInfo->flags = 0;
+    multisampleStateInfo->rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampleStateInfo->sampleShadingEnable = VK_FALSE;
+    multisampleStateInfo->minSampleShading = 1.0f;
+    multisampleStateInfo->pSampleMask = NULL;
+    multisampleStateInfo->alphaToCoverageEnable = VK_FALSE;
+    multisampleStateInfo->alphaToOneEnable = VK_FALSE;
+}
+
+void createColorBlendAttachmentStateInfo(VkPipelineColorBlendAttachmentState  *colorBlendAttachmentState)
+{
+    colorBlendAttachmentState->blendEnable = VK_FALSE;
+    colorBlendAttachmentState->srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachmentState->dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachmentState->colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentState->srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachmentState->dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachmentState->alphaBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentState->colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+}
+
+void createColorBlendStateInfo(VkPipelineColorBlendStateCreateInfo  *colorBlendStateInfo, VkPipelineColorBlendAttachmentState  *blendAttachments, uint32_t blendAttachmentsSize)
+{
+    colorBlendStateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendStateInfo->pNext = NULL;
+    colorBlendStateInfo->flags = 0;
+    colorBlendStateInfo->logicOpEnable = VK_FALSE;
+    colorBlendStateInfo->logicOp = VK_LOGIC_OP_NO_OP;
+    colorBlendStateInfo->attachmentCount = blendAttachmentsSize;
+    colorBlendStateInfo->pAttachments = blendAttachments;
+    colorBlendStateInfo->blendConstants[0] = 0.0f;
+    colorBlendStateInfo->blendConstants[1] = 0.0f;
+    colorBlendStateInfo->blendConstants[2] = 0.0f;
+    colorBlendStateInfo->blendConstants[3] = 0.0f;
+}
+
+void createLayoutInfo(VkPipelineLayoutCreateInfo  *layoutInfo, VkDescriptorSetLayout *setLayouts, uint32_t setLayoutSize)
+{
+    layoutInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutInfo->pNext = NULL;
+    layoutInfo->flags = 0;
+    layoutInfo->setLayoutCount = setLayoutSize;
+    layoutInfo->pSetLayouts = setLayouts;
+    layoutInfo->pushConstantRangeCount = 0;
+    layoutInfo->pPushConstantRanges = NULL;
 }
 
 void printStats(VkPhysicalDevice *physicalDevice, VkSurfaceKHR *surface)

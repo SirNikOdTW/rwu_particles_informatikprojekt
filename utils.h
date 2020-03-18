@@ -4,4 +4,4 @@
 #define UPPER_AGE 250
 #define LOWER_AGE 60
 
-char *readFile(char *filename);
+char *readFile(char *filename, char *mode, long *size);

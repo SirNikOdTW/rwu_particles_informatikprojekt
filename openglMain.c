@@ -28,9 +28,9 @@ int main()
     initRandomParticles(e1);
 
     /************* SHADER *************/
-    const GLchar *computeShaderSource = readFile("./opengl/ComputeShader.glsl");
-    const GLchar *vertexShaderSource = readFile("./opengl/VertexShader.glsl");
-    const GLchar *fragmentShaderSource = readFile("./opengl/FragmentShader.glsl");
+    const GLchar *computeShaderSource = readFile("./opengl/ComputeShader.glsl", "r", NULL);
+    const GLchar *vertexShaderSource = readFile("./opengl/VertexShader.glsl", "r", NULL);
+    const GLchar *fragmentShaderSource = readFile("./opengl/FragmentShader.glsl", "r", NULL);
 
     GLuint computeShader = compileShader(computeShaderSource, GL_COMPUTE_SHADER);
     GLuint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
