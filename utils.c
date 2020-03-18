@@ -1,27 +1,33 @@
 #include <stdio.h>
 #include <malloc.h>
+#include <errno.h>
+#include <string.h>
 #include "utils.h"
 
 #define BUFFER_SIZE 1024
 
-char *readFile(char *path)
+char *readFile(char *filename)
 {
-    FILE *file = fopen(path, "r");
-    char *str = malloc(BUFFER_SIZE);
-    int c, i = 0, j = 1;
+    FILE    *file;
+    char    *buffer;
+    long    numbytes;
 
-    while ((c = fgetc(file)) != EOF)
+    if((file = fopen(filename, "r")) == NULL)
     {
-        if (i == j * BUFFER_SIZE)
-        {
-            str = realloc(str, ++j * BUFFER_SIZE);
-        }
-
-        str[i++] = (char) c;
+        printf("ERROR open file %s: %s\n", filename, strerror(errno));
     }
 
+    fseek(file, 0L, SEEK_END);
+    numbytes = ftell(file);
+    fseek(file, 0L, SEEK_SET);
+
+    if((buffer = calloc(numbytes, sizeof(char))) == NULL)
+    {
+        printf("ERROR allocating memory: %s\n", strerror(errno));
+    }
+
+    fread(buffer, sizeof(char), numbytes, file);
     fclose(file);
 
-    return str;
+    return buffer;
 }
-

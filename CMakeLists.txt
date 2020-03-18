@@ -10,6 +10,11 @@ add_executable(Informatikprojekt cpuMain.c ${PROJECT_SOURCES_OPENGL})
 add_executable(Informatikprojekt_OpenGL openglMain.c ${PROJECT_SOURCES_OPENGL})
 add_executable(Informatikprojekt_Vulkan vulkanMain.c ${PROJECT_SOURCES_VULKAN})
 
+# Copy shader file to output directory
+configure_file(./shaders/opengl/ComputeShader.glsl ComputeShader.glsl COPYONLY)
+configure_file(./shaders/opengl/VertexShader.glsl VertexShader.glsl COPYONLY)
+configure_file(./shaders/opengl/FragmentShader.glsl FragmentShader.glsl COPYONLY)
+
 # Vulkan
 find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
