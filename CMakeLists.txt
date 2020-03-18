@@ -11,9 +11,17 @@ add_executable(Informatikprojekt_OpenGL openglMain.c ${PROJECT_SOURCES_OPENGL})
 add_executable(Informatikprojekt_Vulkan vulkanMain.c ${PROJECT_SOURCES_VULKAN})
 
 # Copy shader file to output directory
-configure_file(./shaders/opengl/ComputeShader.glsl ComputeShader.glsl COPYONLY)
-configure_file(./shaders/opengl/VertexShader.glsl VertexShader.glsl COPYONLY)
-configure_file(./shaders/opengl/FragmentShader.glsl FragmentShader.glsl COPYONLY)
+## OpenGL
+configure_file(./shaders/opengl/ComputeShader.glsl ./opengl/ComputeShader.glsl COPYONLY)
+configure_file(./shaders/opengl/VertexShader.glsl ./opengl/VertexShader.glsl COPYONLY)
+configure_file(./shaders/opengl/FragmentShader.glsl ./opengl/FragmentShader.glsl COPYONLY)
+## Vulkan
+configure_file(./shaders/vulkan/ComputeShader.comp ./vulkan/ComputeShader.comp COPYONLY)
+configure_file(./shaders/vulkan/VertexShader.vert ./vulkan/VertexShader.vert COPYONLY)
+configure_file(./shaders/vulkan/FragmentShader.frag ./vulkan/FragmentShader.frag COPYONLY)
+configure_file(./shaders/vulkan/runCompiler.bat ./vulkan/runCompiler.bat COPYONLY)
+execute_process(COMMAND runCompiler.bat WORKING_DIRECTORY ./vulkan)
+
 
 # Vulkan
 find_package(Vulkan REQUIRED)

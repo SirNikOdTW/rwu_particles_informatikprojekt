@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include "particlesystem.h"
 #include "initOpenGL.h"
 #include "utils.h"
@@ -29,9 +28,9 @@ int main()
     initRandomParticles(e1);
 
     /************* SHADER *************/
-    const GLchar *computeShaderSource = readFile("ComputeShader.glsl");
-    const GLchar *vertexShaderSource = readFile("VertexShader.glsl");
-    const GLchar *fragmentShaderSource = readFile("FragmentShader.glsl");
+    const GLchar *computeShaderSource = readFile("./opengl/ComputeShader.glsl");
+    const GLchar *vertexShaderSource = readFile("./opengl/VertexShader.glsl");
+    const GLchar *fragmentShaderSource = readFile("./opengl/FragmentShader.glsl");
 
     GLuint computeShader = compileShader(computeShaderSource, GL_COMPUTE_SHADER);
     GLuint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);

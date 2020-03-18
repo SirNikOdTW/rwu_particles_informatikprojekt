@@ -4,8 +4,6 @@
 #include <string.h>
 #include "utils.h"
 
-#define BUFFER_SIZE 1024
-
 char *readFile(char *filename)
 {
     FILE    *file;
