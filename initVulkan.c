@@ -1,7 +1,7 @@
 #include "initVulkan.h"
 
 int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, GLFWwindow *window,
-               VkSwapchainKHR *swapChain, VkImageView *imageViews, uint32_t *amountImages)
+               VkSwapchainKHR *swapChain, VkImageView **imageViews, uint32_t *amountImages)
 {
     // VkApplicationInfo
     VkApplicationInfo appInfo;
@@ -68,13 +68,15 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
     ASSERT_VK_SUCCESS(vkGetSwapchainImagesKHR(*device, *swapChain, amountImages, swapChainImages))
 
     // Image view
-    imageViews = malloc(*amountImages * sizeof(VkImageView));
+    *imageViews = malloc(*amountImages * sizeof(VkImageView));
     VkImageViewCreateInfo imageViewInfo;
     for (int i = 0; i < *amountImages; i++)
     {
         initImageViewInfo(&imageViewInfo, swapChainImages, i);
-        ASSERT_VK_SUCCESS(vkCreateImageView(*device, &imageViewInfo, NULL, &imageViews[i]))
+        ASSERT_VK_SUCCESS(vkCreateImageView(*device, &imageViewInfo, NULL, &*imageViews[i]))
     }
+
+
 
     return SUCCESS;
 }

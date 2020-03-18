@@ -8,7 +8,7 @@ int main()
     VkDevice device;
     VkSurfaceKHR surface;
     VkSwapchainKHR swapChain;
-    VkImageView *imageViews;
+    VkImageView *imageViews = NULL;
     uint32_t amountImages;
 
     // GLFW
@@ -18,7 +18,7 @@ int main()
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Informatikprojekt - Vulkan", NULL, NULL);
 
     // Init Vulkan
-    ASSERT_SUCCESS(initVulkan(&vkInstance, &device, &surface, window, &swapChain, imageViews, &amountImages))
+    ASSERT_SUCCESS(initVulkan(&vkInstance, &device, &surface, window, &swapChain, &imageViews, &amountImages))
 
     // Render Loop
     while (!glfwWindowShouldClose(window))

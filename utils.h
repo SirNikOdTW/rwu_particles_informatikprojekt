@@ -3,3 +3,5 @@
 
 #define UPPER_AGE 250
 #define LOWER_AGE 60
+
+char *readFile(char *path);

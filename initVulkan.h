@@ -5,7 +5,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 
-#include "def.h"
+#include "utils.h"
 
 #define APP_NAME "Informatikprojekt - Vulkan"
 #define APP_VERSION VK_MAKE_VERSION(0, 0, 0)
@@ -26,7 +26,7 @@
     val * 9.313226e-10
 
 int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, GLFWwindow *window,
-               VkSwapchainKHR *swapChain, VkImageView *imageViews, uint32_t *amountImages);
+               VkSwapchainKHR *swapChain, VkImageView **imageViews, uint32_t *amountImages);
 void initAppInfo(VkApplicationInfo *appInfo);
 void initCreateInfo(VkApplicationInfo *appInfo, VkInstanceCreateInfo *instanceInfo);
 void initQueueInfo(VkDeviceQueueCreateInfo *queueInfo);

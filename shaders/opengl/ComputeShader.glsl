@@ -1,6 +1,7 @@
 #version 460
 
 #define FLOAT_MAX 4294967296.0f
+#define FLOAT_FACTOR 0.00000000023283064365386962890625f
 
 struct particle
 {
@@ -34,11 +35,15 @@ uint hash(uvec3 seed)
 
 uint rand(uint seed)
 {
-    // Xorshift algorithm from George Marsaglia's paper
     seed ^= (seed << 13u);
     seed ^= (seed >> 17u);
     seed ^= (seed << 5u);
     return seed;
+}
+
+int foreSign(uint seed)
+{
+    return rand(seed) % 2 == 0 ? 1 : -1;
 }
 
 void main()
@@ -61,23 +66,19 @@ void main()
 
             part.age = rand(hash(uvec3(hash1, hash2, hash3))) % (250 - 60 + 1) + 60;
 
-            part.vx = (rand(hash1) % 2 == 0 ? 1 : -1) * float(rand(hash2)) * (1.0f / FLOAT_MAX);
-            part.vy = (rand(hash3) % 2 == 0 ? -1 : 1) * float(rand(hash1)) * (1.0f / FLOAT_MAX);
-            part.vz = (rand(hash2) % 2 == 0 ? 1 : -1) * float(rand(hash3)) * (1.0f / FLOAT_MAX);
+            part.vx = foreSign(hash1) * float(rand(hash2)) * FLOAT_FACTOR;
+            part.vy = foreSign(hash3) * float(rand(hash1)) * FLOAT_FACTOR;
+            part.vz = foreSign(hash2) * float(rand(hash3)) * FLOAT_FACTOR;
 
-            part.cx = float(rand(hash1)) * (1.0f / FLOAT_MAX);
-            part.cy = float(rand(hash1)) * (1.0f / FLOAT_MAX);
-            part.cz = float(rand(hash1)) * (1.0f / FLOAT_MAX);
+            part.cx = float(rand(hash1 ^ hash2)) * FLOAT_FACTOR;
+            part.cy = float(rand(hash2 ^ hash3)) * FLOAT_FACTOR;
+            part.cz = float(rand(hash3 ^ hash1)) * FLOAT_FACTOR;
         }
         else
         {
             part.px += part.vx * dt;
             part.py += part.vy * dt;
             part.pz += part.vz * dt;
-
-            part.cx = float(rand(hash1)) * (1.0f / FLOAT_MAX);
-            part.cy = float(rand(hash1)) * (1.0f / FLOAT_MAX);
-            part.cz = float(rand(hash1)) * (1.0f / FLOAT_MAX);
 
             part.age -= 0.01f;
         }

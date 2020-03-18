@@ -1,6 +1,6 @@
 #include "particlesystem.h"
 #include "initOpenGL.h"
-#include "def.h"
+#include "utils.h"
 
 #define PARTICLE_AMOUNT 1000
 
