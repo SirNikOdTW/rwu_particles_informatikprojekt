@@ -1,8 +1,9 @@
+#include <malloc.h>
 #include "particlesystem.h"
 #include "initOpenGL.h"
 #include "utils.h"
 
-#define PARTICLE_AMOUNT 1000000
+#define PARTICLE_AMOUNT 10000000
 
 int main()
 {
@@ -49,6 +50,7 @@ int main()
     GLuint renderShaderProgram = linkShaders(renderShaders, 2);
 
     float *particles = serializeParticlesystem(ps);
+    freeParticleSystem(ps);
     GLsizeiptr sizeOfParticle = 3 * sizeof(vector3f) + sizeof(float);
 
     GLuint particleBuffer;
@@ -57,6 +59,8 @@ int main()
     glBufferData(GL_SHADER_STORAGE_BUFFER, PARTICLE_AMOUNT * sizeOfParticle, particles, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    free(particles);
 
     GLuint vertexArray;
     glGenVertexArrays(1, &vertexArray);
@@ -99,10 +103,11 @@ int main()
 
     //END
     deleteShaders(renderShaders, 2);
+    glDeleteProgram(renderShaderProgram);
     deleteShaders(computeShaders, 1);
-
+    glDeleteProgram(computeShaderProgram);
+    glDeleteBuffers(1, &particleBuffer);
     terminateGLFW(window);
-    freeParticleSystem(ps);
 
     return 0;
 }

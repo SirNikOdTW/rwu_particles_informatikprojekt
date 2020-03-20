@@ -48,8 +48,26 @@ void createColorBlendStateInfo(VkPipelineColorBlendStateCreateInfo  *colorBlendS
                                VkPipelineColorBlendAttachmentState  *blendAttachments, uint32_t blendAttachmentsSize);
 void createLayoutInfo(VkPipelineLayoutCreateInfo  *layoutInfo, VkDescriptorSetLayout *setLayouts, uint32_t setLayoutSize);
 void createAttachmentDescription(VkAttachmentDescription *attachmentDescription);
+void createAttachmentReference(VkAttachmentReference *attachmentReference, uint32_t attachment);
+void createSubpassDescription(VkSubpassDescription *subpassDescription, VkPipelineBindPoint bindPoint,
+                              VkAttachmentReference *attachmentReference);
+void createRenderPassInfo(VkRenderPassCreateInfo *renderPassInfo, VkAttachmentDescription *attachmentDescriptions,
+                          VkSubpassDescription *subpassDescriptions);
+void createGraphicsPipelineInfo(VkGraphicsPipelineCreateInfo *graphicsPipelineInfo,
+                                VkPipelineShaderStageCreateInfo *shaderStages,
+                                VkPipelineVertexInputStateCreateInfo *vertexInputState,
+                                VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
+                                VkPipelineViewportStateCreateInfo *viewportState,
+                                VkPipelineRasterizationStateCreateInfo *rasterizationState,
+                                VkPipelineMultisampleStateCreateInfo *multisampleState,
+                                VkPipelineColorBlendStateCreateInfo *colorBlendState, VkPipelineLayout *pipelineLayout,
+                                VkRenderPass *renderPass);
+void createFramebufferInfo(VkFramebufferCreateInfo *framebufferInfo, VkRenderPass *renderPass, VkImageView *imageView);
+void createCommandPoolInfo(VkCommandPoolCreateInfo *commandPoolInfo, uint32_t queueFamilyIndex);
 void shutdownVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, VkSwapchainKHR *swapChain,
-                    VkImageView *imageViews, uint32_t imagesSize, VkShaderModule *modules, uint32_t shaderModulesSize,
-                    VkPipelineLayout *pipelineLayout);
+                    VkImageView *imageViews, uint32_t imageViewsSize, VkShaderModule *modules,
+                    uint32_t shaderModulesSize, VkPipelineLayout *pipelineLayouts, uint32_t pipelineLayoutsSize,
+                    VkRenderPass *renderPasses, uint32_t renderPassesSize, VkPipeline *pipelines,
+                    uint32_t pipelinesSize, VkFramebuffer *framebuffers, VkCommandPool *commandPool);
 void shutdownGLFW(GLFWwindow *window);
 void printStats(VkPhysicalDevice *physicalDevice, VkSurfaceKHR *surface);

@@ -190,20 +190,133 @@ void createAttachmentDescription(VkAttachmentDescription *attachmentDescription)
     attachmentDescription->finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
+void createAttachmentReference(VkAttachmentReference *attachmentReference, uint32_t attachment)
+{
+    attachmentReference->attachment = attachment;
+    attachmentReference->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+}
+
+void createSubpassDescription(VkSubpassDescription *subpassDescription, VkPipelineBindPoint bindPoint,
+                              VkAttachmentReference *attachmentReference)
+{
+    subpassDescription->flags = 0;
+    subpassDescription->pipelineBindPoint = bindPoint;
+    subpassDescription->inputAttachmentCount = 0;
+    subpassDescription->pInputAttachments = NULL;
+    subpassDescription->colorAttachmentCount = 1;
+    subpassDescription->pColorAttachments = attachmentReference;
+    subpassDescription->pResolveAttachments = NULL;
+    subpassDescription->pDepthStencilAttachment = NULL;
+    subpassDescription->preserveAttachmentCount = 0;
+    subpassDescription->pPreserveAttachments = NULL;
+}
+
+void createRenderPassInfo(VkRenderPassCreateInfo *renderPassInfo, VkAttachmentDescription *attachmentDescriptions, VkSubpassDescription *subpassDescriptions)
+{
+    renderPassInfo->sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo->pNext = NULL;
+    renderPassInfo->flags = 0;
+    renderPassInfo->attachmentCount = 1;
+    renderPassInfo->pAttachments = attachmentDescriptions;
+    renderPassInfo->subpassCount = 1;
+    renderPassInfo->pSubpasses = subpassDescriptions;
+    renderPassInfo->dependencyCount = 0;
+    renderPassInfo->pDependencies = NULL;
+}
+
+void createGraphicsPipelineInfo(VkGraphicsPipelineCreateInfo *graphicsPipelineInfo,
+                                VkPipelineShaderStageCreateInfo *shaderStages,
+                                VkPipelineVertexInputStateCreateInfo *vertexInputState,
+                                VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
+                                VkPipelineViewportStateCreateInfo *viewportState,
+                                VkPipelineRasterizationStateCreateInfo *rasterizationState,
+                                VkPipelineMultisampleStateCreateInfo *multisampleState,
+                                VkPipelineColorBlendStateCreateInfo *colorBlendState, VkPipelineLayout *pipelineLayout,
+                                VkRenderPass *renderPass)
+{
+    graphicsPipelineInfo->sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphicsPipelineInfo->pNext = NULL;
+    graphicsPipelineInfo->flags = 0;
+    graphicsPipelineInfo->stageCount = 3;
+    graphicsPipelineInfo->pStages = shaderStages;
+    graphicsPipelineInfo->pVertexInputState = vertexInputState;
+    graphicsPipelineInfo->pInputAssemblyState = inputAssemblyState;
+    graphicsPipelineInfo->pTessellationState = NULL;
+    graphicsPipelineInfo->pViewportState = viewportState;
+    graphicsPipelineInfo->pRasterizationState = rasterizationState;
+    graphicsPipelineInfo->pMultisampleState = multisampleState;
+    graphicsPipelineInfo->pDepthStencilState = NULL;
+    graphicsPipelineInfo->pColorBlendState = colorBlendState;
+    graphicsPipelineInfo->pDynamicState = NULL;
+    graphicsPipelineInfo->layout = *pipelineLayout;
+    graphicsPipelineInfo->renderPass = *renderPass;
+    graphicsPipelineInfo->subpass = 0;
+    graphicsPipelineInfo->basePipelineHandle = VK_NULL_HANDLE;
+    graphicsPipelineInfo->basePipelineIndex = -1;
+}
+
+void createFramebufferInfo(VkFramebufferCreateInfo *framebufferInfo, VkRenderPass *renderPass, VkImageView *imageView)
+{
+    framebufferInfo->sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo->pNext = NULL;
+    framebufferInfo->flags = 0;
+    framebufferInfo->renderPass = *renderPass;
+    framebufferInfo->attachmentCount = 1;
+    framebufferInfo->pAttachments = imageView;
+    framebufferInfo->width = WIDTH;
+    framebufferInfo->height = HEIGHT;
+    framebufferInfo->layers = 1;
+}
+
+void createCommandPoolInfo(VkCommandPoolCreateInfo *commandPoolInfo, uint32_t queueFamilyIndex)
+{
+    commandPoolInfo->sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    commandPoolInfo->pNext = NULL;
+    commandPoolInfo->flags = 0;
+    commandPoolInfo->queueFamilyIndex = queueFamilyIndex;
+}
+
+void createCommandBufferAllocateInfo(VkCommandBufferAllocateInfo *commandBufferAllocateInfo)
+{
+
+}
+
 void shutdownVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, VkSwapchainKHR *swapChain,
-                    VkImageView *imageViews, uint32_t imagesSize, VkShaderModule *modules, uint32_t shaderModulesSize,
-                    VkPipelineLayout *pipelineLayout)
+                    VkImageView *imageViews, uint32_t imageViewsSize, VkShaderModule *modules,
+                    uint32_t shaderModulesSize, VkPipelineLayout *pipelineLayouts, uint32_t pipelineLayoutsSize,
+                    VkRenderPass *renderPasses, uint32_t renderPassesSize, VkPipeline *pipelines,
+                    uint32_t pipelinesSize, VkFramebuffer *framebuffers, VkCommandPool *commandPool)
 {
     vkDeviceWaitIdle(*device);
 
-    vkDestroyPipelineLayout(*device, *pipelineLayout, NULL);
+    vkDestroyCommandPool(*device, *commandPool, NULL);
+
+    for (int i = 0; i < imageViewsSize; ++i)
+    {
+        vkDestroyFramebuffer(*device, framebuffers[i], NULL);
+    }
+
+    for (int i = 0; i < pipelinesSize; ++i)
+    {
+        vkDestroyPipeline(*device, pipelines[i], NULL);
+    }
+
+    for (int i = 0; i < renderPassesSize; ++i)
+    {
+        vkDestroyRenderPass(*device, renderPasses[i], NULL);
+    }
+
+    for (int i = 0; i < pipelineLayoutsSize; ++i)
+    {
+        vkDestroyPipelineLayout(*device, pipelineLayouts[i], NULL);
+    }
 
     for (int i = 0; i < shaderModulesSize; ++i)
     {
         vkDestroyShaderModule(*device, modules[i], NULL);
     }
 
-    for (int i = 0; i < imagesSize; i++)
+    for (int i = 0; i < imageViewsSize; i++)
     {
         vkDestroyImageView(*device, imageViews[i], NULL);
     }

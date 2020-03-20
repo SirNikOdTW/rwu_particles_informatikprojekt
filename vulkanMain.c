@@ -4,7 +4,7 @@
 #include "initVulkan.h"
 #include "particlesystem.h"
 
-#define PARTICLE_AMOUNT 100
+#define PARTICLE_AMOUNT 0
 
 int main()
 {
@@ -13,8 +13,12 @@ int main()
     VkSurfaceKHR surface;
     VkSwapchainKHR swapChain;
     VkImageView *imageViews = NULL;
-    uint32_t amountImages;
+    uint32_t imageViewsSize;
     VkPipelineLayout pipelineLayout;
+    VkRenderPass renderPass;
+    VkPipeline pipeline;
+    VkFramebuffer *framebuffers;
+    VkCommandPool commandPool;
 
     /************* INIT *************/
     // GLFW
@@ -24,7 +28,7 @@ int main()
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Informatikprojekt - Vulkan", NULL, NULL);
 
     // Init Vulkan
-    ASSERT_SUCCESS(initVulkan(&vkInstance, &device, &surface, window, &swapChain, &imageViews, &amountImages))
+    ASSERT_SUCCESS(initVulkan(&vkInstance, &device, &surface, window, &swapChain, &imageViews, &imageViewsSize))
 
     /************* PARTICLE SYSTEM *************/
     vector3f *epos1 = initVector3f(0, 0, 0);
@@ -89,8 +93,46 @@ int main()
     createLayoutInfo(&layoutInfo, NULL, 0);
     ASSERT_VK_SUCCESS(vkCreatePipelineLayout(device, &layoutInfo, NULL, &pipelineLayout))
 
+    // Attachments
     VkAttachmentDescription attachmentDescription;
     createAttachmentDescription(&attachmentDescription);
+
+    VkAttachmentReference attachmentReference;
+    createAttachmentReference(&attachmentReference, 0);
+
+    // Subpasses
+    VkSubpassDescription subpassDescription;
+    createSubpassDescription(&subpassDescription, VK_PIPELINE_BIND_POINT_GRAPHICS, &attachmentReference);
+
+    // Renderpass
+    VkRenderPassCreateInfo renderPassInfo;
+    createRenderPassInfo(&renderPassInfo, &attachmentDescription, &subpassDescription);
+    ASSERT_VK_SUCCESS(vkCreateRenderPass(device, &renderPassInfo, NULL, &renderPass))
+
+    // Graphics pipeline
+    VkGraphicsPipelineCreateInfo graphicsPipelineInfo;
+    createGraphicsPipelineInfo(&graphicsPipelineInfo, shaderStages, &vertexInputStateInfo, &inputAssemblyStateInfo,
+                               &viewportStateInfo, &rasterizationStateInfo, &multisampleStateInfo, &colorBlendStateInfo,
+                               &pipelineLayout, &renderPass);
+    ASSERT_VK_SUCCESS(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, NULL, &pipeline))
+
+    // Framebuffers
+    framebuffers = malloc(imageViewsSize * sizeof(VkFramebuffer));
+    for (int i = 0; i < imageViewsSize; ++i)
+    {
+        VkFramebufferCreateInfo framebufferInfo;
+        createFramebufferInfo(&framebufferInfo, &renderPass, &imageViews[i]);
+
+        ASSERT_VK_SUCCESS(vkCreateFramebuffer(device, &framebufferInfo, NULL, &framebuffers[i]))
+    }
+
+    // Command pool
+    VkCommandPoolCreateInfo commandPoolInfo;
+    createCommandPoolInfo(&commandPoolInfo, 0);
+    ASSERT_VK_SUCCESS(vkCreateCommandPool(device, &commandPoolInfo, NULL, &commandPool))
+
+    // Allocate info
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo;
 
 
     /************* RENDER LOOP *************/
@@ -98,10 +140,11 @@ int main()
     {
         glfwPollEvents();
     }
-
     // Shutdown Vulkan
     VkShaderModule modules[3] = { computeShaderModule, vertexShaderModule, fragmentShaderModule };
-    shutdownVulkan(&vkInstance, &device, &surface, &swapChain, imageViews, amountImages, modules, 3, &pipelineLayout);
+    shutdownVulkan(&vkInstance, &device, &surface, &swapChain, imageViews, imageViewsSize, modules, 3, &pipelineLayout,
+                   1,
+                   &renderPass, 1, &pipeline, 1, framebuffers, &commandPool);
 
     // Shutdown GLFW
     shutdownGLFW(window);

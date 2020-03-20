@@ -2,7 +2,7 @@
 #include "initOpenGL.h"
 #include "utils.h"
 
-#define PARTICLE_AMOUNT 1000
+#define PARTICLE_AMOUNT 10000
 
 void calcPos(particle *p, float dt);
 void calcCol(particle *p);

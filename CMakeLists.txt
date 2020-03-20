@@ -22,11 +22,9 @@ configure_file(./shaders/vulkan/FragmentShader.frag ./vulkan/FragmentShader.frag
 configure_file(./shaders/vulkan/runCompiler.bat ./vulkan/runCompiler.bat COPYONLY)
 execute_process(COMMAND runCompiler.bat WORKING_DIRECTORY ./vulkan)
 
-
 # Vulkan
 find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
-
 
 # GLFW
 include_directories(./glfw/include)
