@@ -8,7 +8,7 @@ int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, 
     createAppInfo(&appInfo);
 
     // VkInstanceCreateInfo
-    uint32_t  amountOfLayers;
+    uint32_t amountOfLayers;
     vkEnumerateInstanceLayerProperties(&amountOfLayers, NULL);
     VkLayerProperties layers[amountOfLayers];
     vkEnumerateInstanceLayerProperties(&amountOfLayers, layers);
@@ -177,6 +177,13 @@ void createImageViewInfo(VkImageViewCreateInfo *imageViewInfo, VkImage *swapChai
     imageViewInfo->subresourceRange = subresourceRange;
 }
 
+void createSemaphoreInfo(VkSemaphoreCreateInfo *semaphoreInfo)
+{
+    semaphoreInfo->sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    semaphoreInfo->pNext = NULL;
+    semaphoreInfo->flags = 0;
+}
+
 void createAttachmentDescription(VkAttachmentDescription *attachmentDescription)
 {
     attachmentDescription->flags = 0;
@@ -276,18 +283,73 @@ void createCommandPoolInfo(VkCommandPoolCreateInfo *commandPoolInfo, uint32_t qu
     commandPoolInfo->queueFamilyIndex = queueFamilyIndex;
 }
 
-void createCommandBufferAllocateInfo(VkCommandBufferAllocateInfo *commandBufferAllocateInfo)
+void createCommandBufferAllocateInfo(VkCommandBufferAllocateInfo *commandBufferAllocateInfo, VkCommandPool *commandPool, uint32_t amountImages)
 {
+    commandBufferAllocateInfo->sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAllocateInfo->pNext = NULL;
+    commandBufferAllocateInfo->commandPool = *commandPool;
+    commandBufferAllocateInfo->level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAllocateInfo->commandBufferCount = amountImages;
+}
 
+void createCommandBufferBeginInfo(VkCommandBufferBeginInfo *commandBufferBeginInfo)
+{
+    commandBufferBeginInfo->sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    commandBufferBeginInfo->pNext = NULL;
+    commandBufferBeginInfo->flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    commandBufferBeginInfo->pInheritanceInfo = NULL;
+}
+
+void createRenderPassBeginInfo(VkRenderPassBeginInfo *renderPassBeginInfo, VkRenderPass *renderPass, VkFramebuffer *framebuffer)
+{
+    VkRect2D renderArea = { {0, 0}, {WIDTH, HEIGHT} };
+    VkClearValue clearValue = {0, 0, 0, 1};
+
+    renderPassBeginInfo->sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo->pNext = NULL;
+    renderPassBeginInfo->renderPass = *renderPass;
+    renderPassBeginInfo->framebuffer = *framebuffer;
+    renderPassBeginInfo->renderArea = renderArea;
+    renderPassBeginInfo->clearValueCount = 1;
+    renderPassBeginInfo->pClearValues = &clearValue;
+}
+
+void createBufferInfo(VkBufferCreateInfo *bufferCreateInfo, VkBufferUsageFlags usageFlags, VkDeviceSize size)
+{
+    bufferCreateInfo->sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo->pNext = NULL;
+    bufferCreateInfo->flags = 0;
+    bufferCreateInfo->size = size;
+    bufferCreateInfo->usage = usageFlags;
+    bufferCreateInfo->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    bufferCreateInfo->queueFamilyIndexCount = 0;
+    bufferCreateInfo->pQueueFamilyIndices = NULL;
+}
+
+void createMemoryAllocateInfo(VkMemoryAllocateInfo *memoryAllocateInfo, VkDeviceSize size, uint32_t memoryTypeIndex)
+{
+    memoryAllocateInfo->sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memoryAllocateInfo->pNext = NULL;
+    memoryAllocateInfo->allocationSize = size;
+    memoryAllocateInfo->memoryTypeIndex = memoryTypeIndex;
 }
 
 void shutdownVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, VkSwapchainKHR *swapChain,
                     VkImageView *imageViews, uint32_t imageViewsSize, VkShaderModule *modules,
                     uint32_t shaderModulesSize, VkPipelineLayout *pipelineLayouts, uint32_t pipelineLayoutsSize,
                     VkRenderPass *renderPasses, uint32_t renderPassesSize, VkPipeline *pipelines,
-                    uint32_t pipelinesSize, VkFramebuffer *framebuffers, VkCommandPool *commandPool)
+                    uint32_t pipelinesSize, VkFramebuffer *framebuffers, VkCommandPool *commandPool,
+                    VkCommandBuffer *commandBuffers, VkSemaphore *semaphores, uint32_t semaphoresSize)
 {
     vkDeviceWaitIdle(*device);
+
+    for (int i = 0; i < semaphoresSize; ++i)
+    {
+        vkDestroySemaphore(*device, semaphores[i], NULL);
+    }
+
+    vkFreeCommandBuffers(*device, *commandPool, imageViewsSize, commandBuffers);
+    free(commandBuffers);
 
     vkDestroyCommandPool(*device, *commandPool, NULL);
 

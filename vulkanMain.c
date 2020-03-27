@@ -1,10 +1,40 @@
 #include <stdio.h>
-#include <string.h>
 
 #include "initVulkan.h"
 #include "particlesystem.h"
 
 #define PARTICLE_AMOUNT 0
+
+void drawFrame();
+
+typedef struct compute {
+    VkInstance instance;
+    VkDebugReportCallbackEXT debugReportCallback;
+
+    VkPhysicalDevice physicalDevice;
+    VkDevice device;
+
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+    VkShaderModule shaderModule;
+
+    VkCommandPool commandPool;
+    VkCommandBuffer commandBuffer;
+
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetLayout descriptorSetLayout;
+
+    VkBuffer buffer;
+    VkDeviceMemory bufferMemory;
+    uint32_t bufferSize;
+
+    const char **enabledLayer;
+
+    VkQueue queue;
+    uint32_t queueFamilyIndex;
+} Compute;
+
 
 int main()
 {
@@ -19,6 +49,9 @@ int main()
     VkPipeline pipeline;
     VkFramebuffer *framebuffers;
     VkCommandPool commandPool;
+    VkCommandBuffer *commandBuffers;
+    VkSemaphore imageAvailable;
+    VkSemaphore renderingFinished;
 
     /************* INIT *************/
     // GLFW
@@ -59,7 +92,8 @@ int main()
     VkPipelineShaderStageCreateInfo fragmentShaderStageInfo;
     createShaderStageInfo(&fragmentShaderStageInfo, VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShaderModule, "main");
 
-    VkPipelineShaderStageCreateInfo shaderStages[3] = { computeShaderStageInfo, vertexShaderStageInfo, fragmentShaderStageInfo };
+    VkPipelineShaderStageCreateInfo shaderStages[3] = {computeShaderStageInfo, vertexShaderStageInfo,
+                                                       fragmentShaderStageInfo};
 
     /************* PIPELINE *************/
     // Vertex input
@@ -133,23 +167,66 @@ int main()
 
     // Allocate info
     VkCommandBufferAllocateInfo commandBufferAllocateInfo;
+    createCommandBufferAllocateInfo(&commandBufferAllocateInfo, &commandPool, imageViewsSize);
 
+    // Command buffers
+    commandBuffers = malloc(imageViewsSize * sizeof(VkCommandBuffer));
+    ASSERT_VK_SUCCESS(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffers))
+
+    // Begin Info command buffers
+    VkCommandBufferBeginInfo commandBufferBeginInfo;
+    createCommandBufferBeginInfo(&commandBufferBeginInfo);
+
+    for (int i = 0; i < imageViewsSize; ++i)
+    {
+        ASSERT_VK_SUCCESS(vkBeginCommandBuffer(commandBuffers[i], &commandBufferBeginInfo))
+
+        VkRenderPassBeginInfo renderPassBeginInfo;
+        createRenderPassBeginInfo(&renderPassBeginInfo, &renderPass, &framebuffers[i]);
+
+        vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+        vkCmdEndRenderPass(commandBuffers[i]);
+
+        ASSERT_VK_SUCCESS(vkEndCommandBuffer(commandBuffers[i]))
+    }
+
+    // Semaphores
+    VkSemaphoreCreateInfo semaphoreInfo;
+    createSemaphoreInfo(&semaphoreInfo);
+
+    ASSERT_VK_SUCCESS(vkCreateSemaphore(device, &semaphoreInfo, NULL, &imageAvailable))
+    ASSERT_VK_SUCCESS(vkCreateSemaphore(device, &semaphoreInfo, NULL, &renderingFinished))
 
     /************* RENDER LOOP *************/
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
+        drawFrame();
     }
+
     // Shutdown Vulkan
-    VkShaderModule modules[3] = { computeShaderModule, vertexShaderModule, fragmentShaderModule };
+    VkShaderModule modules[3] = {computeShaderModule, vertexShaderModule, fragmentShaderModule};
+    VkSemaphore semaphores[2] = {imageAvailable, renderingFinished};
     shutdownVulkan(&vkInstance, &device, &surface, &swapChain, imageViews, imageViewsSize, modules, 3, &pipelineLayout,
                    1,
-                   &renderPass, 1, &pipeline, 1, framebuffers, &commandPool);
+                   &renderPass, 1, &pipeline, 1, framebuffers, &commandPool, commandBuffers, semaphores, 2);
 
     // Shutdown GLFW
     shutdownGLFW(window);
 
     return SUCCESS;
 }
+
+void drawFrame(VkDevice *device, VkSwapchainKHR *swapchainKhr, VkSemaphore *imageAvailable, VkSemaphore *renderingFinished)
+{
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(*device, *swapchainKhr, UINT64_MAX, *imageAvailable, VK_NULL_HANDLE, &imageIndex);
+}
+
 
 

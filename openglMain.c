@@ -3,7 +3,7 @@
 #include "initOpenGL.h"
 #include "utils.h"
 
-#define PARTICLE_AMOUNT 10000000
+#define PARTICLE_AMOUNT 15000000
 
 int main()
 {
@@ -107,6 +107,7 @@ int main()
     deleteShaders(computeShaders, 1);
     glDeleteProgram(computeShaderProgram);
     glDeleteBuffers(1, &particleBuffer);
+    glDeleteVertexArrays(1, &vertexArray);
     terminateGLFW(window);
 
     return 0;

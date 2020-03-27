@@ -882,9 +882,9 @@ extern "C" {
  *  Framebuffer bit depth [hint](@ref GLFW_ACCUM_ALPHA_BITS).
  */
 #define GLFW_ACCUM_ALPHA_BITS       0x0002100A
-/*! @brief Framebuffer auxiliary buffer hint.
+/*! @brief Framebuffer auxiliary Buffer hint.
  *
- *  Framebuffer auxiliary buffer [hint](@ref GLFW_AUX_BUFFERS).
+ *  Framebuffer auxiliary Buffer [hint](@ref GLFW_AUX_BUFFERS).
  */
 #define GLFW_AUX_BUFFERS            0x0002100B
 /*! @brief OpenGL stereoscopic rendering hint.

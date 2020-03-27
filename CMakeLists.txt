@@ -4,11 +4,11 @@ project(Informatikprojekt C)
 set(CMAKE_C_STANDARD 11)
 set(PROJECT_SOURCES particlesystem.h particlesystem.c utils.h utils.c)
 set(PROJECT_SOURCES_OPENGL ${PROJECT_SOURCES} initOpenGL.h initOpenGL.c utils.h glad/src/glad.c)
-set(PROJECT_SOURCES_VULKAN ${PROJECT_SOURCES} initVulkan.h initVulkan.c)
+set(PROJECT_SOURCES_VULKAN ${PROJECT_SOURCES} newVulkan/initVulkan.h newVulkan/initVulkan.c)
 
 add_executable(Informatikprojekt cpuMain.c ${PROJECT_SOURCES_OPENGL})
 add_executable(Informatikprojekt_OpenGL openglMain.c ${PROJECT_SOURCES_OPENGL})
-add_executable(Informatikprojekt_Vulkan vulkanMain.c ${PROJECT_SOURCES_VULKAN})
+add_executable(Informatikprojekt_Vulkan newVulkan/vulkanMain.c ${PROJECT_SOURCES_VULKAN})
 
 # Copy shader file to output directory
 ## OpenGL
@@ -17,8 +17,8 @@ configure_file(./shaders/opengl/VertexShader.glsl ./opengl/VertexShader.glsl COP
 configure_file(./shaders/opengl/FragmentShader.glsl ./opengl/FragmentShader.glsl COPYONLY)
 ## Vulkan
 configure_file(./shaders/vulkan/ComputeShader.comp ./vulkan/ComputeShader.comp COPYONLY)
-configure_file(./shaders/vulkan/VertexShader.vert ./vulkan/VertexShader.vert COPYONLY)
-configure_file(./shaders/vulkan/FragmentShader.frag ./vulkan/FragmentShader.frag COPYONLY)
+configure_file("shaders/vulkan/VertexShader.vert" ./vulkan/VertexShader.vert COPYONLY)
+configure_file("shaders/vulkan/FragmentShader.frag" ./vulkan/FragmentShader.frag COPYONLY)
 configure_file(./shaders/vulkan/runCompiler.bat ./vulkan/runCompiler.bat COPYONLY)
 execute_process(COMMAND runCompiler.bat WORKING_DIRECTORY ./vulkan)
 
