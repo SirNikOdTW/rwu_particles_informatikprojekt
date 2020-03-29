@@ -11,7 +11,6 @@ int main()
     (ps->emitters)[0] = e1;
     initRandomParticles(e1);
     float *particles = serializeParticlesystem(ps);
-    freeParticleSystem(ps);
 
     Dt dt = { 0.5f };
     StaticIn staticIn = {
@@ -21,6 +20,8 @@ int main()
             PARTICLE_AMOUNT
     };
 
+    freeParticleSystem(ps);
+
     /************* INIT GLFW *************/
     ASSERT_GLFW_SUCCESS(glfwInit());
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -28,32 +29,38 @@ int main()
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Informatikprojekt - Vulkan", NULL, NULL);
 
     /************* INIT VULKAN *************/
-    // Compute
     Compute compute = {
             .particleBufferSize = PARTICLE_SIZE * PARTICLE_AMOUNT,
             .staticInUniformBufferSize = sizeof(StaticIn),
             .dtUniformBufferSize = sizeof(Dt)
     };
-    createInstance(&compute);
-    findPhysicalDevice(&compute);
-    createDevice(&compute);
+    Graphics graphics = {};
+
+    // General
+    createInstance(&compute, &graphics);
+    findPhysicalDevice(&compute, &graphics);
+    createDevice(&compute, &graphics);
+
+    // Compute
     createComputeBuffers(&compute);
     createComputeDescriptorSetLayouts(&compute);
     createComputeDescriptorSets(&compute);
     createComputePipeline(&compute);
     fillComputeBuffers(&compute, particles, &dt, &staticIn);
     createComputeCommandBuffer(&compute);
+    createSemaphore(compute.device, &(compute.semaphore));
 
     // Graphics
-    Graphics graphics = {
-            .instance = compute.instance,
-            .physicalDevice = compute.physicalDevice,
-            .device = compute.device,
-    };
+    createGraphicsSurface(&graphics, window);
+    createSwapchain(&graphics);
+    createGraphicsPipeline(&graphics);
+    createGraphicsCommandBuffers(&graphics);
+    createSemaphore(graphics.device, &(graphics.semaphore));
+
 
     /************* RENDER LOOP *************/
     double time, tLast = 0;
-    Dt tFrame = { 1.0f };
+    Dt tFrame = {};
     while (!glfwWindowShouldClose(window))
     {
         time = glfwGetTime();

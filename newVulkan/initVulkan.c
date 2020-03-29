@@ -7,10 +7,18 @@ void shutdownGLFW(GLFWwindow *window)
     glfwTerminate();
 }
 
-void createInstance(Compute *compute)
+void createInstance(Compute *compute, Graphics *graphics)
 {
-    GLuint glfwExtensionsSize;
-    const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionsSize);
+    GLuint enabledLayerSize = 0;
+    const char **enabledLayer;
+    GLuint extensionsSize;
+    const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&extensionsSize);
+
+    #ifndef NDEBUG
+        enabledLayerSize = 1;
+        enabledLayer = malloc(sizeof(char *));
+        enabledLayer[0] = "VK_LAYER_LUNARG_standard_validation";
+    #endif
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -24,15 +32,17 @@ void createInstance(Compute *compute)
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.flags = 0;
     instanceCreateInfo.pApplicationInfo = &applicationInfo;
-    instanceCreateInfo.enabledLayerCount = 0;
-    instanceCreateInfo.ppEnabledLayerNames = NULL;
-    instanceCreateInfo.enabledExtensionCount = glfwExtensionsSize;
+    instanceCreateInfo.enabledLayerCount = enabledLayerSize;
+    instanceCreateInfo.ppEnabledLayerNames = enabledLayer;
+    instanceCreateInfo.enabledExtensionCount = extensionsSize;
     instanceCreateInfo.ppEnabledExtensionNames = glfwExtensions;
 
     ASSERT_VK(vkCreateInstance(&instanceCreateInfo, NULL, &(compute->instance)))
+
+    graphics->instance = compute->instance;
 }
 
-void findPhysicalDevice(Compute *compute)
+void findPhysicalDevice(Compute *compute, Graphics *graphics)
 {
     uint32_t devicesSize;
     vkEnumeratePhysicalDevices(compute->instance, &devicesSize, NULL);
@@ -53,7 +63,7 @@ void findPhysicalDevice(Compute *compute)
 
         if (WORKGROUP_SIZE_X <= deviceProperties.limits.maxComputeWorkGroupSize[0]
             && PARTICLE_AMOUNT / WORKGROUP_SIZE_X <= deviceProperties.limits.maxComputeWorkGroupCount[0]
-            && PARTICLE_SIZE * PARTICLE_AMOUNT <= deviceProperties.limits.maxStorageBufferRange)
+            && (uint32_t) (PARTICLE_SIZE * PARTICLE_AMOUNT) <= deviceProperties.limits.maxStorageBufferRange)
         {
             compute->physicalDevice = physicalDevices[i];
             break;
@@ -65,6 +75,8 @@ void findPhysicalDevice(Compute *compute)
         printf("Fatal : No device found with capable limits!");
         assert(compute->physicalDevice);
     }
+
+    graphics->physicalDevice = compute->physicalDevice;
 }
 
 uint32_t getQueueFamilyIndex(Compute *compute, VkQueueFlagBits queueFlagBits)
@@ -76,7 +88,7 @@ uint32_t getQueueFamilyIndex(Compute *compute, VkQueueFlagBits queueFlagBits)
 
     for (uint32_t i = 0; i < queueFamiliesSize; ++i)
     {
-        if (queueFamilies[i].queueCount > 0
+        if (queueFamilies[i].queueCount >= 2
             && queueFamilies[i].queueFlags & queueFlagBits)
         {
             return i;
@@ -86,9 +98,10 @@ uint32_t getQueueFamilyIndex(Compute *compute, VkQueueFlagBits queueFlagBits)
     return -1;
 }
 
-void createDevice(Compute *compute)
+void createDevice(Compute *compute, Graphics *graphics)
 {
-    compute->queueFamilyIndex = getQueueFamilyIndex(compute, VK_QUEUE_COMPUTE_BIT);
+    compute->queueFamilyIndex = getQueueFamilyIndex(compute, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT);
+    graphics->queueFamilyIndex = compute->queueFamilyIndex;
 
     if (compute->queueFamilyIndex < 0)
     {
@@ -96,23 +109,31 @@ void createDevice(Compute *compute)
         assert(compute->queueFamilyIndex >= 0);
     }
 
+    float queuePriority = 1.0f;
     VkDeviceQueueCreateInfo deviceQueueCreateInfo = {};
     deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     deviceQueueCreateInfo.queueFamilyIndex = compute->queueFamilyIndex;
-    deviceQueueCreateInfo.queueCount = 1;
-    deviceQueueCreateInfo.pQueuePriorities = NULL;
+    deviceQueueCreateInfo.queueCount = 2;
+    deviceQueueCreateInfo.pQueuePriorities = &queuePriority;
 
     VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
+    const char *swapchainExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+    const char **extensions = &swapchainExtension;
 
     VkDeviceCreateInfo deviceCreateInfo = {};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.pQueueCreateInfos = &deviceQueueCreateInfo;
     deviceCreateInfo.queueCreateInfoCount = 1;
     deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
+    deviceCreateInfo.enabledExtensionCount = 1;
+    deviceCreateInfo.ppEnabledExtensionNames = extensions;
 
     ASSERT_VK(vkCreateDevice(compute->physicalDevice, &deviceCreateInfo, NULL, &(compute->device)))
 
+    graphics->device = compute->device;
+
     vkGetDeviceQueue(compute->device, compute->queueFamilyIndex, 0, &(compute->queue));
+    vkGetDeviceQueue(graphics->device, graphics->queueFamilyIndex, 1, &(graphics->queue));
 }
 
 uint32_t findMemoryType(Compute *compute, uint32_t memoryTypeBits, VkMemoryPropertyFlags properties)
@@ -172,16 +193,17 @@ void createComputeBuffers(Compute *compute)
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     // staticIn Uniform Buffer
-    createComputeBuffer(compute, compute->staticInUniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    createComputeBuffer(compute, compute->staticInUniformBufferSize,
+                        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         &(compute->staticInUniformBuffer),
                         &(compute->staticInUniformBufferMemory), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 }
 
-void createComputeDescriptorSetLayout(Compute *compute, uint32_t binding, VkDescriptorType descriptorType, VkDescriptorSetLayout *descriptorSetLayout)
+void createComputeDescriptorSetLayout(Compute *compute, VkDescriptorType descriptorType, VkDescriptorSetLayout *descriptorSetLayout)
 {
     VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = {};
-    descriptorSetLayoutBinding.binding = binding;
+    descriptorSetLayoutBinding.binding = 0;
     descriptorSetLayoutBinding.descriptorType = descriptorType;
     descriptorSetLayoutBinding.descriptorCount = 1;
     descriptorSetLayoutBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -197,15 +219,15 @@ void createComputeDescriptorSetLayout(Compute *compute, uint32_t binding, VkDesc
 void createComputeDescriptorSetLayouts(Compute *compute)
 {
     // Particle Buffer
-    createComputeDescriptorSetLayout(compute, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    createComputeDescriptorSetLayout(compute, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                      &(compute->particleBufferDescriptorSetLayout));
 
     // dt Uniform Buffer
-    createComputeDescriptorSetLayout(compute, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    createComputeDescriptorSetLayout(compute, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                      &(compute->dtUniformBufferDescriptorSetLayout));
 
     // staticIn Uniform Buffer
-    createComputeDescriptorSetLayout(compute, 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    createComputeDescriptorSetLayout(compute, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                                      &(compute->staticInUniformBufferDescriptorSetLayout));
 }
 
@@ -269,19 +291,26 @@ void createComputeDescriptorSets(Compute *compute)
                                compute->staticInUniformBuffer, compute->staticInUniformBufferSize);
 }
 
+void createShaderModule(VkDevice device, char *filename, VkShaderModule *shaderModule)
+{
+    long shaderSourceSize;
+    char *shaderSource = readFile(filename, "rb", &shaderSourceSize);
+
+    VkShaderModuleCreateInfo shaderModuleInfo;
+    shaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shaderModuleInfo.pNext = NULL;
+    shaderModuleInfo.flags = 0;
+    shaderModuleInfo.codeSize = shaderSourceSize;
+    shaderModuleInfo.pCode = (uint32_t *) shaderSource;
+
+    ASSERT_VK(vkCreateShaderModule(device, &shaderModuleInfo, NULL, shaderModule))
+
+    free(shaderSource);
+}
+
 void createComputePipeline(Compute *compute)
 {
-    long computeShaderSourceSize;
-    char *computeShaderSource = readFile("./vulkan/comp.spv", "rb", &computeShaderSourceSize);
-
-    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
-    shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shaderModuleCreateInfo.pCode = (uint32_t *) computeShaderSource;
-    shaderModuleCreateInfo.codeSize = computeShaderSourceSize;
-
-    ASSERT_VK(vkCreateShaderModule(compute->device, &shaderModuleCreateInfo, NULL, &(compute->shaderModule)))
-
-    free(computeShaderSource);
+    createShaderModule(compute->device, "./vulkan/comp.spv", &(compute->shaderModule));
 
     VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {};
     pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -299,12 +328,14 @@ void createComputePipeline(Compute *compute)
     pipelineLayoutCreateInfo.setLayoutCount = 3;
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts;
 
-    ASSERT_VK(vkCreatePipelineLayout(compute->device, &pipelineLayoutCreateInfo, NULL, &(compute->pipelineLayout)));
+    ASSERT_VK(vkCreatePipelineLayout(compute->device, &pipelineLayoutCreateInfo, NULL, &(compute->pipelineLayout)))
 
     VkComputePipelineCreateInfo pipelineCreateInfo = {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stage = pipelineShaderStageCreateInfo;
     pipelineCreateInfo.layout = compute->pipelineLayout;
+    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineCreateInfo.basePipelineIndex = -1;
 
     ASSERT_VK(vkCreateComputePipelines(compute->device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL, &(compute->pipeline)))
 }
@@ -424,6 +455,12 @@ void createComputeCommandBuffer(Compute *compute)
     ASSERT_VK(vkEndCommandBuffer(compute->commandBuffer))
 }
 
+void createSemaphore(VkDevice device, VkSemaphore *semaphore)
+{
+    VkSemaphoreCreateInfo semaphoreCreateInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    ASSERT_VK(vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, semaphore));
+}
+
 void runComputeCommandBuffer(Compute *compute)
 {
     VkSubmitInfo submitInfo = {};
@@ -440,7 +477,7 @@ void runComputeCommandBuffer(Compute *compute)
 
     ASSERT_VK(vkQueueSubmit(compute->queue, 1, &submitInfo, fence))
 
-    ASSERT_VK(vkWaitForFences(compute->device, 1, &fence, VK_TRUE, UINT64_MAX));
+    ASSERT_VK(vkWaitForFences(compute->device, 1, &fence, VK_TRUE, UINT64_MAX))
 
     vkDestroyFence(compute->device, fence, NULL);
 }
@@ -455,7 +492,7 @@ void shutdownComputeVulkan(Compute *compute)
     vkDestroyBuffer(compute->device, compute->dtUniformBuffer, NULL);
     vkDestroyBuffer(compute->device, compute->staticInUniformBuffer, NULL);
 
-    vkDestroyShaderModule(compute->device, compute->shaderModule, NULL);
+    vkDestroyPipelineLayout(compute->device, compute->pipelineLayout, NULL);
 
     vkDestroyDescriptorPool(compute->device, compute->particleBufferDescriptorPool, NULL);
     vkDestroyDescriptorPool(compute->device, compute->dtUniformBufferDescriptorPool, NULL);
@@ -465,13 +502,225 @@ void shutdownComputeVulkan(Compute *compute)
     vkDestroyDescriptorSetLayout(compute->device, compute->dtUniformBufferDescriptorSetLayout, NULL);
     vkDestroyDescriptorSetLayout(compute->device, compute->staticInUniformBufferDescriptorSetLayout, NULL);
 
-    vkDestroyPipelineLayout(compute->device, compute->pipelineLayout, NULL);
-
     vkDestroyPipeline(compute->device, compute->pipeline, NULL);
+
+    vkDestroyShaderModule(compute->device, compute->shaderModule, NULL);
+
+    vkFreeCommandBuffers(compute->device, compute->commandPool, 1, &(compute->commandBuffer));
 
     vkDestroyCommandPool(compute->device, compute->commandPool, NULL);
 
     vkDestroyDevice(compute->device, NULL);
 
     vkDestroyInstance(compute->instance, NULL);
+}
+
+void createGraphicsSurface(Graphics *graphics, GLFWwindow *window)
+{
+    ASSERT_VK(glfwCreateWindowSurface(graphics->instance, window, NULL, &(graphics->surface)))
+}
+
+void createSwapchain(Graphics *graphics)
+{
+    VkBool32 swapChainSupport;
+    ASSERT_VK(vkGetPhysicalDeviceSurfaceSupportKHR(graphics->physicalDevice, 0, graphics->surface, &swapChainSupport))
+    if (!swapChainSupport)
+    {
+        printf("ERROR: Swap chain not supported!");
+        assert(!swapChainSupport);
+    }
+
+    VkExtent2D imageExtent = { WIDTH, HEIGHT };
+    VkSwapchainCreateInfoKHR swapChainCreateInfo;
+    swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapChainCreateInfo.surface = graphics->surface;
+    swapChainCreateInfo.minImageCount = 1;
+    swapChainCreateInfo.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    swapChainCreateInfo.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swapChainCreateInfo.imageExtent = imageExtent;
+    swapChainCreateInfo.imageArrayLayers = 1;
+    swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapChainCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapChainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    swapChainCreateInfo.clipped = VK_FALSE;
+    swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
+
+    ASSERT_VK(vkCreateSwapchainKHR(graphics->device, &swapChainCreateInfo, NULL, &(graphics->swapChain)))
+
+    vkGetSwapchainImagesKHR(graphics->device, graphics->swapChain, &(graphics->imageViewsSize), NULL);
+    VkImage swapChainImages[graphics->imageViewsSize];
+    ASSERT_VK(vkGetSwapchainImagesKHR(graphics->device, graphics->swapChain, &(graphics->imageViewsSize), swapChainImages))
+
+    graphics->imageViews = malloc(graphics->imageViewsSize * sizeof(VkImageView));
+
+    for (int i = 0; i < graphics->imageViewsSize; i++)
+    {
+        VkImageViewCreateInfo imageViewInfo;
+        VkComponentMapping componentMapping = {
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY
+        };
+        VkImageSubresourceRange subresourceRange = {
+                VK_IMAGE_ASPECT_COLOR_BIT,0, 1, 0, 1
+        };
+
+        imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageViewInfo.image = swapChainImages[i];
+        imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+        imageViewInfo.components = componentMapping;
+        imageViewInfo.subresourceRange = subresourceRange;
+
+        ASSERT_VK(vkCreateImageView(graphics->device, &imageViewInfo, NULL, &(graphics->imageViews[i])))
+    }
+}
+
+void createShaderStageInfo(VkPipelineShaderStageCreateInfo *shaderStageCreateInfo, VkShaderStageFlagBits shaderStageFlagBits,
+                      VkShaderModule shaderModule)
+{
+    shaderStageCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStageCreateInfo->stage = shaderStageFlagBits;
+    shaderStageCreateInfo->module = shaderModule;
+    shaderStageCreateInfo->pName = "main";
+}
+
+void createGraphicsPipeline(Graphics *graphics)
+{
+    createShaderModule(graphics->device, "./vulkan/vert.spv", &(graphics->vertexShaderModule));
+    createShaderModule(graphics->device, "./vulkan/frag.spv", &(graphics->fragmentShaderModule));
+
+    VkPipelineShaderStageCreateInfo vertexShaderStageInfo;
+    createShaderStageInfo(&vertexShaderStageInfo, VK_SHADER_STAGE_VERTEX_BIT, graphics->vertexShaderModule);
+    VkPipelineShaderStageCreateInfo fragmentShaderStageInfo;
+    createShaderStageInfo(&fragmentShaderStageInfo, VK_SHADER_STAGE_FRAGMENT_BIT, graphics->fragmentShaderModule);
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {
+            vertexShaderStageInfo,
+            fragmentShaderStageInfo
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo;
+    vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo;
+    inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+
+    VkViewport viewport;
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = WIDTH;
+    viewport.height = HEIGHT;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = { {0, 0}, {WIDTH, HEIGHT} };
+
+    VkPipelineViewportStateCreateInfo viewportStateInfo;
+    viewportStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateInfo.viewportCount = 1;
+    viewportStateInfo.pViewports = &viewport;
+    viewportStateInfo.scissorCount = 1;
+    viewportStateInfo.pScissors = &scissor;
+
+    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo;
+    rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationStateInfo.depthClampEnable = VK_FALSE;
+    rasterizationStateInfo.rasterizerDiscardEnable = VK_FALSE;
+    rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_POINT;
+    rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationStateInfo.depthBiasEnable = VK_FALSE;
+    rasterizationStateInfo.depthBiasConstantFactor = 0.0f;
+    rasterizationStateInfo.depthBiasClamp = 0.0f;
+    rasterizationStateInfo.depthBiasSlopeFactor = 0.0f;
+    rasterizationStateInfo.lineWidth = 1.0f;
+
+    VkPipelineMultisampleStateCreateInfo multisampleStateInfo;
+    multisampleStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampleStateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampleStateInfo.sampleShadingEnable = VK_FALSE;
+    multisampleStateInfo.minSampleShading = 1.0f;
+    multisampleStateInfo.alphaToCoverageEnable = VK_FALSE;
+    multisampleStateInfo.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState;
+    colorBlendAttachmentState.blendEnable = VK_FALSE;
+    colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo;
+    colorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendStateInfo.logicOpEnable = VK_FALSE;
+    colorBlendStateInfo.logicOp = VK_LOGIC_OP_NO_OP;
+    colorBlendStateInfo.attachmentCount = 1;
+    colorBlendStateInfo.pAttachments = &colorBlendAttachmentState;
+    colorBlendStateInfo.blendConstants[0] = 0.0f;
+    colorBlendStateInfo.blendConstants[1] = 0.0f;
+    colorBlendStateInfo.blendConstants[2] = 0.0f;
+    colorBlendStateInfo.blendConstants[3] = 0.0f;
+
+    VkPipelineLayoutCreateInfo layoutInfo;
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    ASSERT_VK(vkCreatePipelineLayout(graphics->device, &layoutInfo, NULL, &(graphics->pipelineLayout)))
+
+    VkAttachmentDescription attachmentDescription;
+    attachmentDescription.format = VK_FORMAT_B8G8R8A8_UNORM;
+    attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference attachmentReference;
+    attachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpassDescription;
+    subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescription.colorAttachmentCount = 1;
+    subpassDescription.pColorAttachments = &attachmentReference;
+
+    VkRenderPassCreateInfo renderPassInfo;
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &attachmentDescription;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpassDescription;
+
+    ASSERT_VK(vkCreateRenderPass(graphics->device, &renderPassInfo, NULL, &(graphics->renderPass)))
+
+    VkGraphicsPipelineCreateInfo graphicsPipelineInfo;
+    graphicsPipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphicsPipelineInfo.stageCount = 3;
+    graphicsPipelineInfo.pStages = shaderStages;
+    graphicsPipelineInfo.pVertexInputState = &vertexInputStateInfo;
+    graphicsPipelineInfo.pInputAssemblyState = &inputAssemblyStateInfo;
+    graphicsPipelineInfo.pViewportState = &viewportStateInfo;
+    graphicsPipelineInfo.pRasterizationState = &rasterizationStateInfo;
+    graphicsPipelineInfo.pMultisampleState = &multisampleStateInfo;
+    graphicsPipelineInfo.pColorBlendState = &colorBlendStateInfo;
+    graphicsPipelineInfo.layout = graphics->pipelineLayout;
+    graphicsPipelineInfo.renderPass = graphics->renderPass;
+    graphicsPipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    graphicsPipelineInfo.basePipelineIndex = -1;
+
+    ASSERT_VK(vkCreateGraphicsPipelines(graphics->device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, NULL, &(graphics->pipeline)))
+}
+
+void createGraphicsCommandBuffers(Graphics *graphics)
+{
+
 }

@@ -3,7 +3,7 @@
 #include "initOpenGL.h"
 #include "utils.h"
 
-#define PARTICLE_AMOUNT 15000000
+#define PARTICLE_AMOUNT 10000
 
 int main()
 {
@@ -86,7 +86,7 @@ int main()
         /*** UPDATE ***/
         glUseProgram(computeShaderProgram);
         glUniform1f(dtUniformLocation, tFrame);
-        glDispatchCompute(PARTICLE_AMOUNT / 256, 1, 1);
+        glDispatchCompute(PARTICLE_AMOUNT / 1024, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 
         /*** RENDER ***/

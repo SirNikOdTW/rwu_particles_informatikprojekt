@@ -20,7 +20,7 @@ layout(location = 0) uniform float dt;
 layout(location = 1) uniform vec3 resetPos;
 layout(location = 2) uniform uint maxParticles;
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
 uint hash(uvec3 seed)
 {
