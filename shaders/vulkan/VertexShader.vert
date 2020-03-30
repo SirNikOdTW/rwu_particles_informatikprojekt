@@ -8,5 +8,6 @@ layout(location = 0) out vec3 colV;
 void main(void)
 {
     colV = colIn;
+    gl_PointSize = 1.0f;
     gl_Position = vec4(pos, 1);
 }

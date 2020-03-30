@@ -14,7 +14,7 @@
 #define ENGINE_NAME "rwu_particles"
 #define ENGINE_VERSION VK_MAKE_VERSION(0, 0, 0)
 
-#define PARTICLE_AMOUNT 100
+#define PARTICLE_AMOUNT 1000000
 #define PARTICLE_SIZE (3 * sizeof(vector3f) + sizeof(float))
 #define WORKGROUP_SIZE_X 1024
 #define WORKGROUP_SIZE_Y 1
@@ -92,7 +92,7 @@ typedef struct graphics {
     VkShaderModule fragmentShaderModule;
 
     VkCommandPool commandPool;
-    VkCommandBuffer commandBuffer;
+    VkCommandBuffer *commandBuffers;
 
     VkBuffer particleBuffer;
     uint32_t particleBufferSize;
@@ -100,6 +100,8 @@ typedef struct graphics {
     VkQueue queue;
     uint32_t queueFamilyIndex;
     
+    VkSemaphore renderComplete;
+    VkSemaphore presentComplete;
     VkSemaphore semaphore;
 } Graphics;
 
@@ -117,10 +119,13 @@ typedef struct staticIn {
 // Shutdown
 void shutdownGLFW(GLFWwindow *window);
 void shutdownComputeVulkan(Compute *compute);
+void shutdownGraphicsVulkan(Graphics *graphics);
 
+// General
 void createInstance(Compute *compute, Graphics *graphics);
 void findPhysicalDevice(Compute *compute, Graphics *graphics);
 void createDevice(Compute *compute, Graphics *graphics);
+void createParticleBuffer(Compute *compute, Graphics *graphics);
 
 // Compute
 void createComputeBuffers(Compute *compute);
@@ -128,13 +133,13 @@ void createComputeDescriptorSetLayouts(Compute *compute);
 void createComputeDescriptorSets(Compute *compute);
 void createComputePipeline(Compute *compute);
 void fillComputeBuffers(Compute *compute, float *particles, Dt *dtData, StaticIn *staticInData);
-void createComputeCommandBuffer(Compute *compute);
-void runComputeCommandBuffer(Compute *compute);
+void createComputeCommandBuffer(Compute *compute, Graphics *graphics);
 
 // Graphics 
 void createGraphicsSurface(Graphics *graphics, GLFWwindow *window);
 void createSwapchain(Graphics *graphics);
 void createGraphicsPipeline(Graphics *graphics);
+void createFramebuffer(Graphics *graphics);
 void createGraphicsCommandBuffers(Graphics *graphics);
 
 // ELse

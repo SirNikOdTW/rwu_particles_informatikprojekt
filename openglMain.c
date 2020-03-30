@@ -3,7 +3,7 @@
 #include "initOpenGL.h"
 #include "utils.h"
 
-#define PARTICLE_AMOUNT 10000
+#define PARTICLE_AMOUNT 1000000
 
 int main()
 {
@@ -13,6 +13,7 @@ int main()
     setErrorCallbackGL();
 
     int width = WIDTH, height = HEIGHT;
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     GLFWwindow *window = createGLFWWindow(WIDTH, HEIGHT, "Informatikprojekt - OpenGL");
 
     setCurrentContextGL(window);
@@ -72,7 +73,7 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeOfParticle, (GLvoid *)0);
     // color
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeOfParticle, (GLvoid *)24); // 32
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeOfParticle, (GLvoid *)24);
     glBindVertexArray(0);
 
     /************* RENDER LOOP *************/

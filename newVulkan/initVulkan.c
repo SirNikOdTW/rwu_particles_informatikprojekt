@@ -79,42 +79,60 @@ void findPhysicalDevice(Compute *compute, Graphics *graphics)
     graphics->physicalDevice = compute->physicalDevice;
 }
 
-uint32_t getQueueFamilyIndex(Compute *compute, VkQueueFlagBits queueFlagBits)
+uint32_t getQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlagBits queueFlagBits, int noGraphics)
 {
     uint32_t queueFamiliesSize;
-    vkGetPhysicalDeviceQueueFamilyProperties(compute->physicalDevice, &queueFamiliesSize, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesSize, NULL);
     VkQueueFamilyProperties queueFamilies[queueFamiliesSize];
-    vkGetPhysicalDeviceQueueFamilyProperties(compute->physicalDevice, &queueFamiliesSize, queueFamilies);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesSize, queueFamilies);
 
     for (uint32_t i = 0; i < queueFamiliesSize; ++i)
     {
-        if (queueFamilies[i].queueCount >= 2
-            && queueFamilies[i].queueFlags & queueFlagBits)
+        if (noGraphics && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
+        {
+        }
+        else if ((queueFamilies[i].queueFlags & queueFlagBits) == queueFlagBits)
         {
             return i;
         }
     }
 
-    return -1;
+    return UINT32_MAX;
 }
 
 void createDevice(Compute *compute, Graphics *graphics)
 {
-    compute->queueFamilyIndex = getQueueFamilyIndex(compute, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT);
-    graphics->queueFamilyIndex = compute->queueFamilyIndex;
-
-    if (compute->queueFamilyIndex < 0)
+    compute->queueFamilyIndex = getQueueFamilyIndex(compute->physicalDevice, VK_QUEUE_COMPUTE_BIT, 1);
+    if (compute->queueFamilyIndex == UINT32_MAX)
     {
-        printf("Fatal: Could not find a queue family with capability of computing!");
-        assert(compute->queueFamilyIndex >= 0);
+        printf("ERROR: No Queue family found with desired capabilities!\n");
+        assert( compute->queueFamilyIndex < UINT32_MAX);
     }
 
     float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo deviceQueueCreateInfo = {};
-    deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    deviceQueueCreateInfo.queueFamilyIndex = compute->queueFamilyIndex;
-    deviceQueueCreateInfo.queueCount = 2;
-    deviceQueueCreateInfo.pQueuePriorities = &queuePriority;
+    VkDeviceQueueCreateInfo computeDeviceQueueCreateInfo = {};
+    computeDeviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    computeDeviceQueueCreateInfo.queueFamilyIndex = compute->queueFamilyIndex;
+    computeDeviceQueueCreateInfo.queueCount = 1;
+    computeDeviceQueueCreateInfo.pQueuePriorities = &queuePriority;
+
+    graphics->queueFamilyIndex = getQueueFamilyIndex(graphics->physicalDevice, VK_QUEUE_GRAPHICS_BIT, 0);
+    if (graphics->queueFamilyIndex == UINT32_MAX)
+    {
+        printf("ERROR: No Queue family found with desired capabilities!\n");
+        assert( compute->queueFamilyIndex < UINT32_MAX);
+    }
+
+    VkDeviceQueueCreateInfo graphicsDeviceQueueCreateInfo = {};
+    graphicsDeviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    graphicsDeviceQueueCreateInfo.queueFamilyIndex = graphics->queueFamilyIndex;
+    graphicsDeviceQueueCreateInfo.queueCount = 1;
+    graphicsDeviceQueueCreateInfo.pQueuePriorities = &queuePriority;
+
+    VkDeviceQueueCreateInfo deviceQueueCreateInfos[2] = {
+            computeDeviceQueueCreateInfo,
+            graphicsDeviceQueueCreateInfo
+    };
 
     VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
     const char *swapchainExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -122,8 +140,8 @@ void createDevice(Compute *compute, Graphics *graphics)
 
     VkDeviceCreateInfo deviceCreateInfo = {};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.pQueueCreateInfos = &deviceQueueCreateInfo;
-    deviceCreateInfo.queueCreateInfoCount = 1;
+    deviceCreateInfo.queueCreateInfoCount = 2;
+    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
     deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
     deviceCreateInfo.enabledExtensionCount = 1;
     deviceCreateInfo.ppEnabledExtensionNames = extensions;
@@ -133,7 +151,7 @@ void createDevice(Compute *compute, Graphics *graphics)
     graphics->device = compute->device;
 
     vkGetDeviceQueue(compute->device, compute->queueFamilyIndex, 0, &(compute->queue));
-    vkGetDeviceQueue(graphics->device, graphics->queueFamilyIndex, 1, &(graphics->queue));
+    vkGetDeviceQueue(graphics->device, graphics->queueFamilyIndex, 0, &(graphics->queue));
 }
 
 uint32_t findMemoryType(Compute *compute, uint32_t memoryTypeBits, VkMemoryPropertyFlags properties)
@@ -148,44 +166,69 @@ uint32_t findMemoryType(Compute *compute, uint32_t memoryTypeBits, VkMemoryPrope
             return i;
     }
 
-    return -1;
+    return UINT32_MAX;
 }
 
-void createComputeBuffer(Compute *compute, uint32_t bufferSize, VkBufferUsageFlags usageFlags, VkBuffer *buffer,
-                         VkDeviceMemory *bufferMemory, VkMemoryPropertyFlags memoryPropertyFlags)
+void createParticleBuffer(Compute *compute, Graphics *graphics)
 {
+    uint32_t queueFamilyIndices[2] = {
+            compute->queueFamilyIndex,
+            graphics->queueFamilyIndex
+    };
 
     VkBufferCreateInfo particleBufferCreateInfo = {};
     particleBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    particleBufferCreateInfo.size = bufferSize;
-    particleBufferCreateInfo.usage = usageFlags;
-    particleBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    particleBufferCreateInfo.size = compute->particleBufferSize;
+    particleBufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    particleBufferCreateInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+    particleBufferCreateInfo.queueFamilyIndexCount = 2;
+    particleBufferCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
 
-    ASSERT_VK(vkCreateBuffer(compute->device, &particleBufferCreateInfo, NULL, buffer))
+    ASSERT_VK(vkCreateBuffer(compute->device, &particleBufferCreateInfo, NULL, &(compute->particleBuffer)))
 
     VkMemoryRequirements particleBufferMemoryRequirements;
-    vkGetBufferMemoryRequirements(compute->device, *buffer, &particleBufferMemoryRequirements);
+    vkGetBufferMemoryRequirements(compute->device, compute->particleBuffer, &particleBufferMemoryRequirements);
 
     VkMemoryAllocateInfo particleMemoryAllocateInfo = {};
     particleMemoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     particleMemoryAllocateInfo.allocationSize = particleBufferMemoryRequirements.size;
     particleMemoryAllocateInfo.memoryTypeIndex = findMemoryType(compute,
                                                                 particleBufferMemoryRequirements.memoryTypeBits,
-                                                                memoryPropertyFlags);
+                                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    ASSERT_VK(vkAllocateMemory(compute->device, &particleMemoryAllocateInfo, NULL, bufferMemory))
+    ASSERT_VK(vkAllocateMemory(compute->device, &particleMemoryAllocateInfo, NULL, &(compute->particleBufferMemory)))
+
+    ASSERT_VK(vkBindBufferMemory(compute->device, compute->particleBuffer, compute->particleBufferMemory, 0))
+}
+
+void createComputeBuffer(Compute *compute, uint32_t bufferSize, VkBufferUsageFlags usageFlags, VkBuffer *buffer,
+                         VkDeviceMemory *bufferMemory, VkMemoryPropertyFlags memoryPropertyFlags)
+{
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.size = bufferSize;
+    bufferCreateInfo.usage = usageFlags;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    ASSERT_VK(vkCreateBuffer(compute->device, &bufferCreateInfo, NULL, buffer))
+
+    VkMemoryRequirements bufferMemoryRequirements;
+    vkGetBufferMemoryRequirements(compute->device, *buffer, &bufferMemoryRequirements);
+
+    VkMemoryAllocateInfo memoryAllocateInfo = {};
+    memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memoryAllocateInfo.allocationSize = bufferMemoryRequirements.size;
+    memoryAllocateInfo.memoryTypeIndex = findMemoryType(compute,
+                                                        bufferMemoryRequirements.memoryTypeBits,
+                                                        memoryPropertyFlags);
+
+    ASSERT_VK(vkAllocateMemory(compute->device, &memoryAllocateInfo, NULL, bufferMemory))
 
     ASSERT_VK(vkBindBufferMemory(compute->device, *buffer, *bufferMemory, 0))
 }
 
 void createComputeBuffers(Compute *compute)
 {
-    // Particle Buffer
-    createComputeBuffer(compute, compute->particleBufferSize,
-                        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                        &(compute->particleBuffer),
-                        &(compute->particleBufferMemory), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
     // dt Uniform Buffer
     createComputeBuffer(compute, compute->dtUniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         &(compute->dtUniformBuffer),
@@ -350,7 +393,7 @@ void mapBufferMemory(Compute *compute, VkDeviceMemory memory, void *inputData, u
 
 void copyBuffer(Compute  *compute, VkBuffer src, VkBuffer dst, VkDeviceSize size)
 {
-    uint32_t queueFamilyIndex = getQueueFamilyIndex(compute, VK_QUEUE_TRANSFER_BIT);
+    uint32_t queueFamilyIndex = getQueueFamilyIndex(compute->physicalDevice, VK_QUEUE_TRANSFER_BIT, 0);
 
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -418,7 +461,7 @@ void fillComputeBuffers(Compute *compute, float *particles, Dt *dtData, StaticIn
     fillComputeBuffer(compute, compute->staticInUniformBuffer, staticInData, compute->staticInUniformBufferSize);
 }
 
-void createComputeCommandBuffer(Compute *compute)
+void createComputeCommandBuffer(Compute *compute, Graphics *graphics)
 {
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -461,29 +504,12 @@ void createSemaphore(VkDevice device, VkSemaphore *semaphore)
     ASSERT_VK(vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, semaphore));
 }
 
-void runComputeCommandBuffer(Compute *compute)
-{
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &(compute->commandBuffer);
-
-    VkFence fence;
-    VkFenceCreateInfo fenceCreateInfo = {};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.flags = 0;
-
-    ASSERT_VK(vkCreateFence(compute->device, &fenceCreateInfo, NULL, &fence))
-
-    ASSERT_VK(vkQueueSubmit(compute->queue, 1, &submitInfo, fence))
-
-    ASSERT_VK(vkWaitForFences(compute->device, 1, &fence, VK_TRUE, UINT64_MAX))
-
-    vkDestroyFence(compute->device, fence, NULL);
-}
-
 void shutdownComputeVulkan(Compute *compute)
 {
+    vkDeviceWaitIdle(compute->device);
+
+    vkDestroySemaphore(compute->device, compute->semaphore, NULL);
+
     vkFreeMemory(compute->device, compute->particleBufferMemory, NULL);
     vkFreeMemory(compute->device, compute->dtUniformBufferMemory, NULL);
     vkFreeMemory(compute->device, compute->staticInUniformBufferMemory, NULL);
@@ -531,7 +557,7 @@ void createSwapchain(Graphics *graphics)
     }
 
     VkExtent2D imageExtent = { WIDTH, HEIGHT };
-    VkSwapchainCreateInfoKHR swapChainCreateInfo;
+    VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
     swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapChainCreateInfo.surface = graphics->surface;
     swapChainCreateInfo.minImageCount = 1;
@@ -543,7 +569,7 @@ void createSwapchain(Graphics *graphics)
     swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapChainCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapChainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    swapChainCreateInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     swapChainCreateInfo.clipped = VK_FALSE;
     swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -557,7 +583,7 @@ void createSwapchain(Graphics *graphics)
 
     for (int i = 0; i < graphics->imageViewsSize; i++)
     {
-        VkImageViewCreateInfo imageViewInfo;
+        VkImageViewCreateInfo imageViewInfo = {};
         VkComponentMapping componentMapping = {
                 VK_COMPONENT_SWIZZLE_IDENTITY,
                 VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -590,12 +616,41 @@ void createShaderStageInfo(VkPipelineShaderStageCreateInfo *shaderStageCreateInf
 
 void createGraphicsPipeline(Graphics *graphics)
 {
+    VkVertexInputBindingDescription vertexInputBindingDescription;
+    vertexInputBindingDescription.binding = 0;
+    vertexInputBindingDescription.stride = PARTICLE_SIZE;
+    vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputAttributeDescription positionVertexInputAttributeDescription;
+    positionVertexInputAttributeDescription.binding = 0;
+    positionVertexInputAttributeDescription.location = 0;
+    positionVertexInputAttributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+    positionVertexInputAttributeDescription.offset = 0;
+
+    VkVertexInputAttributeDescription colInVertexInputAttributeDescription;
+    colInVertexInputAttributeDescription.binding = 0;
+    colInVertexInputAttributeDescription.location = 1;
+    colInVertexInputAttributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+    colInVertexInputAttributeDescription.offset = 24;
+
+    VkVertexInputAttributeDescription vertexInputAttributeDescription[2] = {
+            positionVertexInputAttributeDescription,
+            colInVertexInputAttributeDescription
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
+    vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputStateInfo.vertexBindingDescriptionCount = 1;
+    vertexInputStateInfo.pVertexBindingDescriptions = &vertexInputBindingDescription;
+    vertexInputStateInfo.vertexAttributeDescriptionCount = 2;
+    vertexInputStateInfo.pVertexAttributeDescriptions = vertexInputAttributeDescription;
+
     createShaderModule(graphics->device, "./vulkan/vert.spv", &(graphics->vertexShaderModule));
     createShaderModule(graphics->device, "./vulkan/frag.spv", &(graphics->fragmentShaderModule));
 
-    VkPipelineShaderStageCreateInfo vertexShaderStageInfo;
+    VkPipelineShaderStageCreateInfo vertexShaderStageInfo = {};
     createShaderStageInfo(&vertexShaderStageInfo, VK_SHADER_STAGE_VERTEX_BIT, graphics->vertexShaderModule);
-    VkPipelineShaderStageCreateInfo fragmentShaderStageInfo;
+    VkPipelineShaderStageCreateInfo fragmentShaderStageInfo = {};
     createShaderStageInfo(&fragmentShaderStageInfo, VK_SHADER_STAGE_FRAGMENT_BIT, graphics->fragmentShaderModule);
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {
@@ -603,15 +658,12 @@ void createGraphicsPipeline(Graphics *graphics)
             fragmentShaderStageInfo
     };
 
-    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo;
-    vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo;
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo = {};
     inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
 
-    VkViewport viewport;
+    VkViewport viewport = {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = WIDTH;
@@ -621,18 +673,18 @@ void createGraphicsPipeline(Graphics *graphics)
 
     VkRect2D scissor = { {0, 0}, {WIDTH, HEIGHT} };
 
-    VkPipelineViewportStateCreateInfo viewportStateInfo;
+    VkPipelineViewportStateCreateInfo viewportStateInfo = {};
     viewportStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportStateInfo.viewportCount = 1;
     viewportStateInfo.pViewports = &viewport;
     viewportStateInfo.scissorCount = 1;
     viewportStateInfo.pScissors = &scissor;
 
-    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo;
+    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = {};
     rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizationStateInfo.depthClampEnable = VK_FALSE;
     rasterizationStateInfo.rasterizerDiscardEnable = VK_FALSE;
-    rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_POINT;
+    rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterizationStateInfo.depthBiasEnable = VK_FALSE;
@@ -641,7 +693,7 @@ void createGraphicsPipeline(Graphics *graphics)
     rasterizationStateInfo.depthBiasSlopeFactor = 0.0f;
     rasterizationStateInfo.lineWidth = 1.0f;
 
-    VkPipelineMultisampleStateCreateInfo multisampleStateInfo;
+    VkPipelineMultisampleStateCreateInfo multisampleStateInfo = {};
     multisampleStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampleStateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisampleStateInfo.sampleShadingEnable = VK_FALSE;
@@ -649,7 +701,7 @@ void createGraphicsPipeline(Graphics *graphics)
     multisampleStateInfo.alphaToCoverageEnable = VK_FALSE;
     multisampleStateInfo.alphaToOneEnable = VK_FALSE;
 
-    VkPipelineColorBlendAttachmentState colorBlendAttachmentState;
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
     colorBlendAttachmentState.blendEnable = VK_FALSE;
     colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -659,7 +711,7 @@ void createGraphicsPipeline(Graphics *graphics)
     colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
     colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo;
+    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
     colorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlendStateInfo.logicOpEnable = VK_FALSE;
     colorBlendStateInfo.logicOp = VK_LOGIC_OP_NO_OP;
@@ -670,41 +722,52 @@ void createGraphicsPipeline(Graphics *graphics)
     colorBlendStateInfo.blendConstants[2] = 0.0f;
     colorBlendStateInfo.blendConstants[3] = 0.0f;
 
-    VkPipelineLayoutCreateInfo layoutInfo;
+    VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
     ASSERT_VK(vkCreatePipelineLayout(graphics->device, &layoutInfo, NULL, &(graphics->pipelineLayout)))
 
-    VkAttachmentDescription attachmentDescription;
+    VkAttachmentDescription attachmentDescription = {};
     attachmentDescription.format = VK_FORMAT_B8G8R8A8_UNORM;
     attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    VkAttachmentReference attachmentReference;
+    VkAttachmentReference attachmentReference = {};
     attachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpassDescription;
+    VkSubpassDescription subpassDescription = {};
     subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpassDescription.colorAttachmentCount = 1;
     subpassDescription.pColorAttachments = &attachmentReference;
 
-    VkRenderPassCreateInfo renderPassInfo;
+    VkSubpassDependency subpassDependency = {};
+    subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpassDependency.dstSubpass = 0;
+    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.srcAccessMask = 0;
+    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &attachmentDescription;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpassDescription;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &subpassDependency;
+
 
     ASSERT_VK(vkCreateRenderPass(graphics->device, &renderPassInfo, NULL, &(graphics->renderPass)))
 
-    VkGraphicsPipelineCreateInfo graphicsPipelineInfo;
+    VkGraphicsPipelineCreateInfo graphicsPipelineInfo = {};
     graphicsPipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    graphicsPipelineInfo.stageCount = 3;
+    graphicsPipelineInfo.stageCount = 2;
     graphicsPipelineInfo.pStages = shaderStages;
     graphicsPipelineInfo.pVertexInputState = &vertexInputStateInfo;
     graphicsPipelineInfo.pInputAssemblyState = &inputAssemblyStateInfo;
@@ -720,7 +783,106 @@ void createGraphicsPipeline(Graphics *graphics)
     ASSERT_VK(vkCreateGraphicsPipelines(graphics->device, VK_NULL_HANDLE, 1, &graphicsPipelineInfo, NULL, &(graphics->pipeline)))
 }
 
+void createFramebuffer(Graphics *graphics)
+{
+    graphics->framebuffers = malloc(graphics->imageViewsSize * sizeof(VkFramebuffer));
+    for (int i = 0; i < graphics->imageViewsSize; ++i)
+    {
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = graphics->renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = &(graphics->imageViews[i]);
+        framebufferInfo.width = WIDTH;
+        framebufferInfo.height = HEIGHT;
+        framebufferInfo.layers = 1;
+
+        ASSERT_VK(vkCreateFramebuffer(graphics->device, &framebufferInfo, NULL, &(graphics->framebuffers[i])))
+    }
+}
+
 void createGraphicsCommandBuffers(Graphics *graphics)
 {
+    VkCommandPoolCreateInfo commandPoolInfo = {};
+    commandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    commandPoolInfo.queueFamilyIndex = graphics->queueFamilyIndex;
 
+    ASSERT_VK(vkCreateCommandPool(graphics->device, &commandPoolInfo, NULL, &(graphics->commandPool)))
+
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+    commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAllocateInfo.commandPool = graphics->commandPool;
+    commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAllocateInfo.commandBufferCount = graphics->imageViewsSize;
+
+    graphics->commandBuffers = malloc(graphics->imageViewsSize * sizeof(VkCommandBuffer));
+
+    ASSERT_VK(vkAllocateCommandBuffers(graphics->device, &commandBufferAllocateInfo, graphics->commandBuffers))
+
+    VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+    VkRect2D renderArea = { {0, 0}, {WIDTH, HEIGHT} };
+    VkClearValue clearValue = {0, 0, 0, 1};
+
+    for (int i = 0; i < graphics->imageViewsSize; i++)
+    {
+        ASSERT_VK(vkBeginCommandBuffer(graphics->commandBuffers[i], &commandBufferBeginInfo))
+
+        VkRenderPassBeginInfo renderPassBeginInfo = {};
+        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.renderPass = graphics->renderPass;
+        renderPassBeginInfo.framebuffer = graphics->framebuffers[i];
+        renderPassBeginInfo.renderArea = renderArea;
+        renderPassBeginInfo.clearValueCount = 1;
+        renderPassBeginInfo.pClearValues = &clearValue;
+
+        vkCmdBeginRenderPass(graphics->commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(graphics->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics->pipeline);
+
+        VkDeviceSize offsets[1] = { 0 };
+        vkCmdBindVertexBuffers(graphics->commandBuffers[i], 0, 1, &(graphics->particleBuffer), offsets);
+
+        vkCmdDraw(graphics->commandBuffers[i], PARTICLE_AMOUNT, 1, 0, 0);
+
+        vkCmdEndRenderPass(graphics->commandBuffers[i]);
+
+        ASSERT_VK(vkEndCommandBuffer(graphics->commandBuffers[i]))
+    }
+}
+
+void shutdownGraphicsVulkan(Graphics *graphics)
+{
+    vkDeviceWaitIdle(graphics->device);
+
+    for (int i = 0; i < graphics->imageViewsSize; ++i)
+    {
+        vkDestroyFramebuffer(graphics->device, graphics->framebuffers[i], NULL);
+    }
+
+    vkDestroyCommandPool(graphics->device, graphics->commandPool, NULL);
+
+    vkDestroySemaphore(graphics->device, graphics->semaphore, NULL);
+    vkDestroySemaphore(graphics->device, graphics->renderComplete, NULL);
+    vkDestroySemaphore(graphics->device, graphics->presentComplete, NULL);
+
+    vkDestroyPipelineLayout(graphics->device, graphics->pipelineLayout, NULL);
+
+    vkDestroyRenderPass(graphics->device, graphics->renderPass, NULL);
+
+    vkDestroyPipeline(graphics->device, graphics->pipeline, NULL);
+
+    vkDestroyShaderModule(graphics->device, graphics->fragmentShaderModule, NULL);
+    vkDestroyShaderModule(graphics->device, graphics->vertexShaderModule, NULL);
+
+    for (int i = 0; i < graphics->imageViewsSize; ++i)
+    {
+        vkDestroyImageView(graphics->device, graphics->imageViews[i], NULL);
+    }
+
+    vkDestroySwapchainKHR(graphics->device, graphics->swapChain, NULL);
+
+    vkDestroySurfaceKHR(graphics->instance, graphics->surface, NULL);
 }
