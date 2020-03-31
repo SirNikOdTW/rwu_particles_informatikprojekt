@@ -84,12 +84,6 @@ int main()
         tFrame = time - tLast;
         tLast = time;
 
-        /*** UPDATE ***/
-        glUseProgram(computeShaderProgram);
-        glUniform1f(dtUniformLocation, tFrame);
-        glDispatchCompute(PARTICLE_AMOUNT / WORKGROUP_SIZE_X, 1, 1);
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
-
         /*** RENDER ***/
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glfwGetFramebufferSize(window, &width, &height);
@@ -97,6 +91,12 @@ int main()
         glUseProgram(renderShaderProgram);
         glDrawArrays(GL_POINTS, 0, PARTICLE_AMOUNT);
         glBindVertexArray(0);
+
+        /*** UPDATE ***/
+        glUseProgram(computeShaderProgram);
+        glUniform1f(dtUniformLocation, tFrame);
+        glDispatchCompute(PARTICLE_AMOUNT / WORKGROUP_SIZE_X, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

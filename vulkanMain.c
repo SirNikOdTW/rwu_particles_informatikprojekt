@@ -96,7 +96,6 @@ int main()
     graphicsPresentInfo.swapchainCount = 1;
     graphicsPresentInfo.pSwapchains = &(graphics.swapChain);
 
-
     // Compute preparation
     VkPipelineStageFlags computeWaitStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
@@ -121,7 +120,8 @@ int main()
         tLast = time;
 
         /*** RENDER ***/
-        ASSERT_VK(vkAcquireNextImageKHR(graphics.device, graphics.swapChain, UINT64_MAX, graphics.presentComplete, VK_NULL_HANDLE, &imageIndex))
+        ASSERT_VK(vkAcquireNextImageKHR(graphics.device, graphics.swapChain, UINT64_MAX,
+                graphics.presentComplete, VK_NULL_HANDLE, &imageIndex))
 
         graphicsSubmitInfo.pCommandBuffers = &(graphics.commandBuffers[imageIndex]);
         ASSERT_VK(vkQueueSubmit(graphics.queue, 1, &graphicsSubmitInfo, VK_NULL_HANDLE))

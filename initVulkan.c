@@ -10,7 +10,7 @@ void shutdownGLFW(GLFWwindow *window)
 void createInstance(Compute *compute, Graphics *graphics)
 {
     GLuint enabledLayerSize = 0;
-    const char **enabledLayer;
+    const char **enabledLayer = NULL;
     GLuint extensionsSize;
     const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&extensionsSize);
 
