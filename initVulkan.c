@@ -501,7 +501,7 @@ void createComputeCommandBuffer(Compute *compute)
     vkCmdBindDescriptorSets(compute->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute->pipelineLayout, 0, 3,
                             descriptorSets, 0, NULL);
 
-    vkCmdDispatch(compute->commandBuffer, WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, WORKGROUP_SIZE_Z);
+    vkCmdDispatch(compute->commandBuffer, PARTICLE_AMOUNT / WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y, WORKGROUP_SIZE_Z);
 
     ASSERT_VK(vkEndCommandBuffer(compute->commandBuffer))
 }
@@ -509,7 +509,7 @@ void createComputeCommandBuffer(Compute *compute)
 void createSemaphore(VkDevice device, VkSemaphore *semaphore)
 {
     VkSemaphoreCreateInfo semaphoreCreateInfo = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    ASSERT_VK(vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, semaphore));
+    ASSERT_VK(vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, semaphore))
 }
 
 void shutdownComputeVulkan(Compute *compute)

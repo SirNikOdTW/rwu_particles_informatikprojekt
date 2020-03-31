@@ -16,7 +16,6 @@
 
 #define PARTICLE_AMOUNT 1000000
 #define PARTICLE_SIZE (3 * sizeof(vector3f) + sizeof(float))
-#define WORKGROUP_SIZE_X 1024
 #define WORKGROUP_SIZE_Y 1
 #define WORKGROUP_SIZE_Z 1
 
