@@ -31,6 +31,17 @@
 }
 #define ASSERT_GLFW_SUCCESS(res) { if (res != GLFW_TRUE) { printf("Error-Code: %d", res); return FAILURE; } }
 
+typedef struct dt {
+    float dt;
+} Dt;
+
+typedef struct staticIn {
+    float x;
+    float y;
+    float z;
+    unsigned int maxParticles;
+} StaticIn;
+
 typedef struct compute {
     VkInstance instance;
 
@@ -105,17 +116,6 @@ typedef struct graphics {
     VkSemaphore semaphore;
 } Graphics;
 
-typedef struct dt {
-    float dt;
-} Dt;
-
-typedef struct staticIn {
-    float x;
-    float y;
-    float z;
-    unsigned int maxParticles;
-} StaticIn;
-
 // Shutdown
 void shutdownGLFW(GLFWwindow *window);
 void shutdownComputeVulkan(Compute *compute);
@@ -133,7 +133,7 @@ void createComputeDescriptorSetLayouts(Compute *compute);
 void createComputeDescriptorSets(Compute *compute);
 void createComputePipeline(Compute *compute);
 void fillComputeBuffers(Compute *compute, float *particles, Dt *dtData, StaticIn *staticInData);
-void createComputeCommandBuffer(Compute *compute, Graphics *graphics);
+void createComputeCommandBuffer(Compute *compute);
 
 // Graphics 
 void createGraphicsSurface(Graphics *graphics, GLFWwindow *window);

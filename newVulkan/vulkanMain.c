@@ -57,7 +57,7 @@ int main()
     ASSERT_VK(vkQueueSubmit(compute.queue, 1, &submitInfo, VK_NULL_HANDLE));
     ASSERT_VK(vkQueueWaitIdle(compute.queue));
 
-    createComputeCommandBuffer(&compute, &graphics);
+    createComputeCommandBuffer(&compute);
 
     // Graphics
     graphics.particleBuffer = compute.particleBuffer;

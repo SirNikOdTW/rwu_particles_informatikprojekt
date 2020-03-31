@@ -366,10 +366,18 @@ void createComputePipeline(Compute *compute)
             compute->dtUniformBufferDescriptorSetLayout,
             compute->staticInUniformBufferDescriptorSetLayout
     };
+
+    VkPushConstantRange dtPushConstantRange = {};
+    dtPushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    dtPushConstantRange.offset = 0;
+    dtPushConstantRange.size = sizeof(Dt);
+
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.setLayoutCount = 3;
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pipelineLayoutCreateInfo.pPushConstantRanges = &dtPushConstantRange;
 
     ASSERT_VK(vkCreatePipelineLayout(compute->device, &pipelineLayoutCreateInfo, NULL, &(compute->pipelineLayout)))
 
@@ -461,7 +469,7 @@ void fillComputeBuffers(Compute *compute, float *particles, Dt *dtData, StaticIn
     fillComputeBuffer(compute, compute->staticInUniformBuffer, staticInData, compute->staticInUniformBufferSize);
 }
 
-void createComputeCommandBuffer(Compute *compute, Graphics *graphics)
+void createComputeCommandBuffer(Compute *compute)
 {
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -488,7 +496,7 @@ void createComputeCommandBuffer(Compute *compute, Graphics *graphics)
     VkDescriptorSet descriptorSets[] = {
             compute->particleBufferDescriptorSet,
             compute->dtUniformBufferDescriptorSet,
-            compute->staticInUniformBufferDescriptorSet,
+            compute->staticInUniformBufferDescriptorSet
     };
     vkCmdBindDescriptorSets(compute->commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute->pipelineLayout, 0, 3,
                             descriptorSets, 0, NULL);
@@ -624,13 +632,13 @@ void createGraphicsPipeline(Graphics *graphics)
     VkVertexInputAttributeDescription positionVertexInputAttributeDescription;
     positionVertexInputAttributeDescription.binding = 0;
     positionVertexInputAttributeDescription.location = 0;
-    positionVertexInputAttributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+    positionVertexInputAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
     positionVertexInputAttributeDescription.offset = 0;
 
     VkVertexInputAttributeDescription colInVertexInputAttributeDescription;
     colInVertexInputAttributeDescription.binding = 0;
     colInVertexInputAttributeDescription.location = 1;
-    colInVertexInputAttributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+    colInVertexInputAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
     colInVertexInputAttributeDescription.offset = 24;
 
     VkVertexInputAttributeDescription vertexInputAttributeDescription[2] = {
