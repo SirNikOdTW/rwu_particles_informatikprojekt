@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <malloc.h>
-#include <stdint-gcc.h>
+#include <assert.h>
 #include "vulkan/vulkan.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 
+#include "particlesystem.h"
 #include "utils.h"
 
 #define APP_NAME "Informatikprojekt - Vulkan"
@@ -13,62 +14,134 @@
 #define ENGINE_NAME "rwu_particles"
 #define ENGINE_VERSION VK_MAKE_VERSION(0, 0, 0)
 
+#define PARTICLE_AMOUNT 1000000
+#define PARTICLE_SIZE (3 * sizeof(vector3f) + sizeof(float))
+#define WORKGROUP_SIZE_X 1024
+#define WORKGROUP_SIZE_Y 1
+#define WORKGROUP_SIZE_Z 1
+
 #define SUCCESS 0
 #define FAILURE -1
-#define ASSERT_SUCCESS(res) { if (res != SUCCESS) { printf("Error-Code: %d", res); return FAILURE; } }
-#define ASSERT_VK_SUCCESS(res) { if (res != VK_SUCCESS) { printf("Error-Code: %d", res); return FAILURE; } }
+#define ASSERT_VK(f) { \
+    VkResult res = (f); \
+    if (res != VK_SUCCESS) { \
+        printf("Fatal : VkResult is %d in %s at line %d\n", res,  __FILE__, __LINE__); \
+        assert(res == VK_SUCCESS); \
+    } \
+}
 #define ASSERT_GLFW_SUCCESS(res) { if (res != GLFW_TRUE) { printf("Error-Code: %d", res); return FAILURE; } }
-#define BOOL_LITERAL(val) val ? "True" : "False"
-#define HUMAN_READABLE(val) val * 9.313226e-10
 
-int initVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, GLFWwindow *window,
-               VkSwapchainKHR *swapChain, VkImageView **imageViews, uint32_t *amountImages);
-void createAppInfo(VkApplicationInfo *appInfo);
-void createInstanceInfo(VkApplicationInfo *appInfo, VkInstanceCreateInfo *instanceInfo);
-void createQueueInfo(VkDeviceQueueCreateInfo *queueInfo);
-void createDeviceInfo(VkDeviceQueueCreateInfo *queueInfo, VkDeviceCreateInfo *deviceInfo,
-        VkPhysicalDeviceFeatures *features);
-void createImageViewInfo(VkImageViewCreateInfo *imageViewInfo, VkImage *swapChainImages, int index);
-void createSwapChainInfo(VkSwapchainCreateInfoKHR *swapChainCreateInfo, VkSurfaceKHR *surface);
-void createShaderStageInfo(VkPipelineShaderStageCreateInfo *shaderStageInfo, VkShaderStageFlagBits shaderStageBit,
-        VkShaderModule shaderModule, const char *entryPointName);
-int createShaderModule(VkDevice device, VkShaderModule *shaderModule, const char *shaderSource, long sourceSize);
-void createPipelineVertexInputStateInfo(VkPipelineVertexInputStateCreateInfo *vertexInputStateInfo,
-        VkVertexInputAttributeDescription *attributes, uint32_t atrributesSize);
-void createInputAssemblyStateInfo(VkPipelineInputAssemblyStateCreateInfo *inputAssemblyStateInfo, VkPrimitiveTopology topology);
-void createViewportStateInfo(VkPipelineViewportStateCreateInfo *viewportStateInfo, float width, float height);
-void createRasterizationStateInfo(VkPipelineRasterizationStateCreateInfo *rasterizationStateInfo, VkPolygonMode polygonMode);
-void createMultisampleStateInfo(VkPipelineMultisampleStateCreateInfo *multisampleStateInfo);
-void createColorBlendAttachmentStateInfo(VkPipelineColorBlendAttachmentState  *colorBlendAttachmentState);
-void createColorBlendStateInfo(VkPipelineColorBlendStateCreateInfo  *colorBlendStateInfo,
-                               VkPipelineColorBlendAttachmentState  *blendAttachments, uint32_t blendAttachmentsSize);
-void createLayoutInfo(VkPipelineLayoutCreateInfo  *layoutInfo, VkDescriptorSetLayout *setLayouts, uint32_t setLayoutSize);
-void createAttachmentDescription(VkAttachmentDescription *attachmentDescription);
-void createAttachmentReference(VkAttachmentReference *attachmentReference, uint32_t attachment);
-void createSubpassDescription(VkSubpassDescription *subpassDescription, VkPipelineBindPoint bindPoint,
-                              VkAttachmentReference *attachmentReference);
-void createRenderPassInfo(VkRenderPassCreateInfo *renderPassInfo, VkAttachmentDescription *attachmentDescriptions,
-                          VkSubpassDescription *subpassDescriptions);
-void createSemaphoreInfo(VkSemaphoreCreateInfo *semaphoreInfo);
-void createGraphicsPipelineInfo(VkGraphicsPipelineCreateInfo *graphicsPipelineInfo,
-                                VkPipelineShaderStageCreateInfo *shaderStages,
-                                VkPipelineVertexInputStateCreateInfo *vertexInputState,
-                                VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState,
-                                VkPipelineViewportStateCreateInfo *viewportState,
-                                VkPipelineRasterizationStateCreateInfo *rasterizationState,
-                                VkPipelineMultisampleStateCreateInfo *multisampleState,
-                                VkPipelineColorBlendStateCreateInfo *colorBlendState, VkPipelineLayout *pipelineLayout,
-                                VkRenderPass *renderPass);
-void createFramebufferInfo(VkFramebufferCreateInfo *framebufferInfo, VkRenderPass *renderPass, VkImageView *imageView);
-void createCommandPoolInfo(VkCommandPoolCreateInfo *commandPoolInfo, uint32_t queueFamilyIndex);
-void createCommandBufferAllocateInfo(VkCommandBufferAllocateInfo *commandBufferAllocateInfo, VkCommandPool *commandPool, uint32_t amountImages);
-void createCommandBufferBeginInfo(VkCommandBufferBeginInfo *commandBufferBeginInfo);
-void createRenderPassBeginInfo(VkRenderPassBeginInfo *renderPassBeginInfo, VkRenderPass *renderPass, VkFramebuffer *framebuffer);
-void shutdownVulkan(VkInstance *vkInstance, VkDevice *device, VkSurfaceKHR *surface, VkSwapchainKHR *swapChain,
-                    VkImageView *imageViews, uint32_t imageViewsSize, VkShaderModule *modules,
-                    uint32_t shaderModulesSize, VkPipelineLayout *pipelineLayouts, uint32_t pipelineLayoutsSize,
-                    VkRenderPass *renderPasses, uint32_t renderPassesSize, VkPipeline *pipelines,
-                    uint32_t pipelinesSize, VkFramebuffer *framebuffers, VkCommandPool *commandPool,
-                    VkCommandBuffer *commandBuffers, VkSemaphore *semaphores, uint32_t semaphoresSize);
+typedef struct dt {
+    float dt;
+} Dt;
+
+typedef struct staticIn {
+    float x;
+    float y;
+    float z;
+    unsigned int maxParticles;
+} StaticIn;
+
+typedef struct compute {
+    VkInstance instance;
+
+    VkPhysicalDevice physicalDevice;
+    VkDevice device;
+
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+    VkShaderModule shaderModule;
+
+    VkCommandPool commandPool;
+    VkCommandBuffer commandBuffer;
+
+    VkDescriptorSetLayout particleBufferDescriptorSetLayout;
+    VkDescriptorPool particleBufferDescriptorPool;
+    VkDescriptorSet particleBufferDescriptorSet;
+    VkBuffer particleBuffer;
+    VkDeviceMemory particleBufferMemory;
+    uint32_t particleBufferSize;
+
+    VkDescriptorSetLayout dtUniformBufferDescriptorSetLayout;
+    VkDescriptorPool dtUniformBufferDescriptorPool;
+    VkDescriptorSet dtUniformBufferDescriptorSet;
+    VkBuffer dtUniformBuffer;
+    VkDeviceMemory dtUniformBufferMemory;
+    uint32_t dtUniformBufferSize;
+
+    VkDescriptorSetLayout staticInUniformBufferDescriptorSetLayout;
+    VkDescriptorPool staticInUniformBufferDescriptorPool;
+    VkDescriptorSet staticInUniformBufferDescriptorSet;
+    VkBuffer staticInUniformBuffer;
+    VkDeviceMemory staticInUniformBufferMemory;
+    uint32_t staticInUniformBufferSize;
+
+    VkQueue queue;
+    uint32_t queueFamilyIndex;
+    
+    VkSemaphore semaphore;
+} Compute;
+
+typedef struct graphics {
+    VkInstance instance;
+
+    VkPhysicalDevice physicalDevice;
+    VkDevice device;
+
+    VkSurfaceKHR surface;
+    VkSwapchainKHR swapChain;
+
+    VkImageView *imageViews;
+    uint32_t imageViewsSize;
+
+    VkRenderPass renderPass;
+    VkFramebuffer *framebuffers;
+    
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+    VkShaderModule vertexShaderModule;
+    VkShaderModule fragmentShaderModule;
+
+    VkCommandPool commandPool;
+    VkCommandBuffer *commandBuffers;
+
+    VkBuffer particleBuffer;
+    uint32_t particleBufferSize;
+
+    VkQueue queue;
+    uint32_t queueFamilyIndex;
+    
+    VkSemaphore renderComplete;
+    VkSemaphore presentComplete;
+    VkSemaphore semaphore;
+} Graphics;
+
+// Shutdown
 void shutdownGLFW(GLFWwindow *window);
-void printStats(VkPhysicalDevice *physicalDevice, VkSurfaceKHR *surface);
+void shutdownComputeVulkan(Compute *compute);
+void shutdownGraphicsVulkan(Graphics *graphics);
+
+// General
+void createInstance(Compute *compute, Graphics *graphics);
+void findPhysicalDevice(Compute *compute, Graphics *graphics);
+void createDevice(Compute *compute, Graphics *graphics);
+void createParticleBuffer(Compute *compute, Graphics *graphics);
+
+// Compute
+void createComputeBuffers(Compute *compute);
+void createComputeDescriptorSetLayouts(Compute *compute);
+void createComputeDescriptorSets(Compute *compute);
+void createComputePipeline(Compute *compute);
+void fillComputeBuffers(Compute *compute, float *particles, Dt *dtData, StaticIn *staticInData);
+void createComputeCommandBuffer(Compute *compute);
+
+// Graphics 
+void createGraphicsSurface(Graphics *graphics, GLFWwindow *window);
+void createSwapchain(Graphics *graphics);
+void createGraphicsPipeline(Graphics *graphics);
+void createFramebuffer(Graphics *graphics);
+void createGraphicsCommandBuffers(Graphics *graphics);
+
+// ELse
+void mapBufferMemory(Compute *compute, VkDeviceMemory memory, void *inputData, uint32_t dataSize);
+void createSemaphore(VkDevice device, VkSemaphore *semaphore);
