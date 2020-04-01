@@ -48,12 +48,12 @@ int main()
         emitter *e;
         particle *p;
         vector3f *pos;
-        for (int j = 0; j < ps->eamount; j++)
+        for (int y = 0; y < ps->eamount; y++)
         {
-            e = (ps->emitters)[j];
-            for (int i = 0; i < e->pamount; i++)
+            e = (ps->emitters)[y];
+            for (int x = 0; x < e->pamount; x++)
             {
-                p = (e->particles)[i];
+                p = (e->particles)[x];
                 pos = p->position;
 
                 glColor3f(p->color->x, p->color->y, p->color->z);

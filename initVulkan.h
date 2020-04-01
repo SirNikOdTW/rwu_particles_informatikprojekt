@@ -14,7 +14,7 @@
 #define ENGINE_NAME "rwu_particles"
 #define ENGINE_VERSION VK_MAKE_VERSION(0, 0, 0)
 
-#define PARTICLE_AMOUNT 10000000
+#define PARTICLE_AMOUNT 1000000
 #define PARTICLE_SIZE (3 * sizeof(vector3f) + sizeof(float))
 #define WORKGROUP_SIZE_Y 1
 #define WORKGROUP_SIZE_Z 1
@@ -144,5 +144,3 @@ void createGraphicsCommandBuffers(Graphics *graphics);
 // Else
 void mapBufferMemory(Compute *compute, VkDeviceMemory memory, void *inputData, uint32_t dataSize);
 void createSemaphore(VkDevice device, VkSemaphore *semaphore);
-
-

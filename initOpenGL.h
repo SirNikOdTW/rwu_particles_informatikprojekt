@@ -1,10 +1,6 @@
-
 #include "glad/glad.h"
 
 #include <GLFW/glfw3.h>
-
-#ifndef INFORMATIKPROJEKT_INITOPENGL_H
-#define INFORMATIKPROJEKT_INITOPENGL_H
 
 void initGlad();
 
@@ -21,5 +17,3 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 GLuint compileShader(const GLchar *shaderSource, GLenum shaderType);
 GLuint linkShaders(GLuint *shaders, GLsizei count);
 void deleteShaders(GLuint *shaders, GLsizei count);
-
-#endif //INFORMATIKPROJEKT_INITOPENGL_H

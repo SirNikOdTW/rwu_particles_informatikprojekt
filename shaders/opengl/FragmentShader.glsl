@@ -7,6 +7,3 @@ void main(void)
 {
     colOut = vec4(colV, 1);
 }
-
-
-

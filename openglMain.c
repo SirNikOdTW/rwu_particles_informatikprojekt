@@ -102,6 +102,7 @@ int main()
         glfwPollEvents();
     }
 
+
     //END
     deleteShaders(renderShaders, 2);
     glDeleteProgram(renderShaderProgram);

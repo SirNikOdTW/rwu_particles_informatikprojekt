@@ -42,7 +42,7 @@ particle_system *initParticleSystem(int eamount)
 /*
  * Updates particles
  */
-int updateParticles(float dt, particle_system *ps, CalculatePositionFunction calculatePosition, CalculateColorFunction calculateColor)
+void updateParticles(float dt, particle_system *ps, CalculatePositionFunction calculatePosition, CalculateColorFunction calculateColor)
 {
     emitter *e;
     particle *p;

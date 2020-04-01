@@ -69,7 +69,7 @@ particle_system *initParticleSystem(int eamount);
 /*
  * Updates particle
  */
-int updateParticles(float dt, particle_system *particleSystem, CalculatePositionFunction calculatePosition, CalculateColorFunction calculateColor);
+void updateParticles(float dt, particle_system *particleSystem, CalculatePositionFunction calculatePosition, CalculateColorFunction calculateColor);
 
 /*
  * Resets a particle to seed at emitter's position
