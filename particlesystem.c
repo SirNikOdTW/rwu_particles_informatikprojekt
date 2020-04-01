@@ -1,6 +1,5 @@
 #include <malloc.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "particlesystem.h"
 
@@ -74,9 +73,9 @@ void resetParticle(emitter *e, particle *p)
     p->position->y = e->position->y;
     p->position->z = e->position->z;
 
-    p->velocity->x = ((float) (rand() % 2 ? -1 : 1) * rand()) / RAND_MAX;
-    p->velocity->y = ((float) (rand() % 2 ? -1 : 1) * rand()) / RAND_MAX;
-    p->velocity->z = ((float) (rand() % 2 ? -1 : 1) * rand()) / RAND_MAX;
+    p->velocity->x = ((float) ((rand() % 2 ? -1 : 1) * rand())) / RAND_MAX;
+    p->velocity->y = ((float) ((rand() % 2 ? -1 : 1) * rand())) / RAND_MAX;
+    p->velocity->z = ((float) ((rand() % 2 ? -1 : 1) * rand())) / RAND_MAX;
 
     p->age = rand() / 10;
 }
@@ -86,7 +85,7 @@ void resetParticle(emitter *e, particle *p)
  */
 int drawParticles(particle_system *particleSystem)
 {
-
+    return 0;
 }
 
 /*

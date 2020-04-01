@@ -6,4 +6,4 @@
 
 #define WORKGROUP_SIZE_X 1024
 
-char *readFile(char *filename, char *mode, long *size);
+char *readFile(char *filename, char *mode, size_t *size);

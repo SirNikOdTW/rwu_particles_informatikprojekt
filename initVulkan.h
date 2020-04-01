@@ -20,7 +20,7 @@
 #define WORKGROUP_SIZE_Z 1
 
 #define SUCCESS 0
-#define FAILURE -1
+#define FAILURE (-1)
 #define ASSERT_VK(f) { \
     VkResult res = (f); \
     if (res != VK_SUCCESS) { \
@@ -28,7 +28,7 @@
         assert(res == VK_SUCCESS); \
     } \
 }
-#define ASSERT_GLFW_SUCCESS(res) { if (res != GLFW_TRUE) { printf("Error-Code: %d", res); return FAILURE; } }
+#define ASSERT_GLFW_SUCCESS(res) { if ((res) != GLFW_TRUE) { printf("Error-Code: %d", res); return FAILURE; } }
 
 typedef struct dt {
     float dt;

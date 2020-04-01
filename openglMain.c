@@ -70,10 +70,10 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, particleBuffer);
     // position
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeOfParticle, (GLvoid *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, (GLsizei) sizeOfParticle, (GLvoid *)0);
     // color
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeOfParticle, (GLvoid *)24);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, (GLsizei) sizeOfParticle, (GLvoid *)24);
     glBindVertexArray(0);
 
     /************* RENDER LOOP *************/
@@ -94,7 +94,7 @@ int main()
 
         /*** UPDATE ***/
         glUseProgram(computeShaderProgram);
-        glUniform1f(dtUniformLocation, tFrame);
+        glUniform1f(dtUniformLocation, (GLfloat) tFrame);
         glDispatchCompute(PARTICLE_AMOUNT / WORKGROUP_SIZE_X, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 

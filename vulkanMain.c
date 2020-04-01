@@ -23,7 +23,7 @@ int main()
     freeParticleSystem(ps);
 
     /************* INIT GLFW *************/
-    ASSERT_GLFW_SUCCESS(glfwInit());
+    ASSERT_GLFW_SUCCESS(glfwInit())
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Informatikprojekt - Vulkan", NULL, NULL);
@@ -54,8 +54,8 @@ int main()
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &compute.semaphore;
-    ASSERT_VK(vkQueueSubmit(compute.queue, 1, &submitInfo, VK_NULL_HANDLE));
-    ASSERT_VK(vkQueueWaitIdle(compute.queue));
+    ASSERT_VK(vkQueueSubmit(compute.queue, 1, &submitInfo, VK_NULL_HANDLE))
+    ASSERT_VK(vkQueueWaitIdle(compute.queue))
 
     createComputeCommandBuffer(&compute);
 

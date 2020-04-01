@@ -336,7 +336,7 @@ void createComputeDescriptorSets(Compute *compute)
 
 void createShaderModule(VkDevice device, char *filename, VkShaderModule *shaderModule)
 {
-    long shaderSourceSize;
+    size_t shaderSourceSize;
     char *shaderSource = readFile(filename, "rb", &shaderSourceSize);
 
     VkShaderModuleCreateInfo shaderModuleInfo;

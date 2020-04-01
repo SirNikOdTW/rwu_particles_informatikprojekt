@@ -4,11 +4,11 @@
 #include <string.h>
 #include "utils.h"
 
-char *readFile(char *filename, char *mode, long *size)
+char *readFile(char *filename, char *mode, size_t *size)
 {
     FILE *file;
     char *buffer;
-    long bytes;
+    size_t bytes;
 
     if((file = fopen(filename, mode)) == NULL)
     {
@@ -16,7 +16,7 @@ char *readFile(char *filename, char *mode, long *size)
     }
 
     fseek(file, 0L, SEEK_END);
-    bytes = ftell(file);
+    bytes = (size_t) ftell(file);
     fseek(file, 0L, SEEK_SET);
 
     if((buffer = calloc(bytes, sizeof(char))) == NULL)
