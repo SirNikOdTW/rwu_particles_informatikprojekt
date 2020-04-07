@@ -4,6 +4,10 @@ Autor: Niklas Birk\
 Betreuer: Prof. Dr. Daniel Scherzer\
 Fach: Informatikprojekt
 
+## Paper
+Die schriftliche Ausarbeitung des Themas ist in [Informatikprojekt (PDF)](Informatikprojekt_release_01042020.pdf) zu finden. 
+In dieser Arbeit wird eine Einführung in Partikelsysteme und Grafik-APIs beschrieben. Anschließend wird die Implementierung des Projektes beschrieben. Die Implementierung wird benötigt, um einen Performancevergleich durchzuführen. Das ist der wissenschaftlichere Teil dieser Arbeit und ist als letzten Teil zu finden.
+
 ## Projektdateien
 Das Projekt enthält im wesentlichen drei Varianten:
 - CPU
