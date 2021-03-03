@@ -58,7 +58,7 @@ int main()
 
                 glColor3f(p->color->x, p->color->y, p->color->z);
                 glBegin(GL_POINTS);
-                glVertex3f(pos->x, pos->y, pos->z);
+                    glVertex3f(pos->x, pos->y, pos->z);
                 glEnd();
             }
         }
