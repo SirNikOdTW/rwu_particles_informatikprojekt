@@ -17,7 +17,7 @@ void createInstance(Compute *compute, Graphics *graphics)
     #ifndef NDEBUG
         enabledLayerSize = 1;
         enabledLayer = malloc(sizeof(char *));
-        enabledLayer[0] = "VK_LAYER_LUNARG_standard_validation";
+        enabledLayer[0] = "VK_LAYER_KHRONOS_validation";
     #endif
 
     VkApplicationInfo applicationInfo = {};
