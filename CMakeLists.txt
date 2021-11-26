@@ -19,20 +19,25 @@ configure_file(./shaders/opengl/FragmentShader.glsl ./opengl/FragmentShader.glsl
 configure_file(./shaders/vulkan/ComputeShader.comp ./vulkan/ComputeShader.comp COPYONLY)
 configure_file("shaders/vulkan/VertexShader.vert" ./vulkan/VertexShader.vert COPYONLY)
 configure_file("shaders/vulkan/FragmentShader.frag" ./vulkan/FragmentShader.frag COPYONLY)
-configure_file(./shaders/vulkan/runCompiler.bat ./vulkan/runCompiler.bat COPYONLY)
-execute_process(COMMAND runCompiler.bat WORKING_DIRECTORY ./vulkan)
+configure_file(shaders/vulkan/runCompiler.sh ./vulkan/runCompiler.sh COPYONLY)
+execute_process(COMMAND sh runCompiler.sh WORKING_DIRECTORY ./vulkan)
 
 # Vulkan
 find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 
-# GLFW
-include_directories(./glfw/include)
-target_link_libraries(Informatikprojekt ${CMAKE_SOURCE_DIR}/glfw/lib-mingw-w64/libglfw3.a)
-target_link_libraries(Informatikprojekt_OpenGL ${CMAKE_SOURCE_DIR}/glfw/lib-mingw-w64/libglfw3.a)
-target_link_libraries(Informatikprojekt_Vulkan Vulkan::Vulkan ${CMAKE_SOURCE_DIR}/glfw/lib-mingw-w64/libglfw3.a)
-
 # glad
+find_package(OpenGL REQUIRED)
 include_directories(./glad/include)
+
+# GLFW
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(./glfw)
+target_link_libraries(Informatikprojekt OpenGL::GL glfw)
+target_link_libraries(Informatikprojekt_OpenGL OpenGL::GL glfw)
+target_link_libraries(Informatikprojekt_Vulkan Vulkan::Vulkan glfw)
 
 

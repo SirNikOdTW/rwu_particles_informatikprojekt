@@ -44,9 +44,8 @@ Zur OpenGL-Variante gehören folgende Dateien:
 - [ComputeShader.comp](shaders/vulkan/ComputeShader.comp): Der Compute-Shader für Vulkan in GLSL
 - [VertexShader.frag](shaders/vulkan/VertexShader.vert): Der Vertex-Shader für Vulkan in GLSL
 - [FragmentShader.vert](shaders/vulkan/FragmentShader.frag): Der Fragment-Shader für Vulkan in GLSL
-- [runCompiler.bat](shaders/vulkan/runCompiler.bat): Eine Batch-Datei zum Übersetzen der Shader in SPIR-V.\
-__!Bitte den Pfad zur glslangValidator.exe auf Ihrem System anpassen!__\
-Cmake sollte sich automatisch um das kopieren der Dateien und Ausführen der Batch-Datei im Zielverzeichnis kümmern.
+- [runCompiler.sh](shaders/vulkan/runCompiler.sh): Ein Shell-Script zum Übersetzen der Shader in SPIR-V.\
+Cmake sollte sich automatisch um das kopieren der Dateien und Ausführen des Shell-Skripts im Zielverzeichnis kümmern.
 
 ### Partikelsystem und Sonstige
 Für das Partikelsystem sind folgende Dateien vorhanden:
