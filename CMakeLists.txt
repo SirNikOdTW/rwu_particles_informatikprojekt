@@ -20,8 +20,14 @@ configure_file(./shaders/opengl/FragmentShader.glsl ./opengl/FragmentShader.glsl
 configure_file(./shaders/vulkan/ComputeShader.comp ./vulkan/ComputeShader.comp COPYONLY)
 configure_file("shaders/vulkan/VertexShader.vert" ./vulkan/VertexShader.vert COPYONLY)
 configure_file("shaders/vulkan/FragmentShader.frag" ./vulkan/FragmentShader.frag COPYONLY)
-configure_file(shaders/vulkan/runCompiler.sh ./vulkan/runCompiler.sh COPYONLY)
-execute_process(COMMAND sh runCompiler.sh WORKING_DIRECTORY ./vulkan)
+
+IF (DEFINED WINDOWS)
+    configure_file(./shaders/vulkan/runCompiler.bat ./vulkan/runCompiler.bat COPYONLY)
+    execute_process(COMMAND runCompiler.bat WORKING_DIRECTORY ./vulkan)
+ELSE()
+    configure_file(shaders/vulkan/runCompiler.sh ./vulkan/runCompiler.sh COPYONLY)
+    execute_process(COMMAND sh runCompiler.sh WORKING_DIRECTORY ./vulkan)
+ENDIF()
 
 # Vulkan
 IF (NOT DEFINED WINDOWS)
