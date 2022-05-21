@@ -40,11 +40,11 @@ IF (DEFINED WINDOWS)
 ENDIF()
 
 # Linking
-IF (DEFINED WINDOWS)
+IF (DEFINED WINDOWS) # glfw windowsbinaries are provided by project
     target_link_libraries(Informatikprojekt ./glfw/lib-mingw-w64/libglfw3.a)
     target_link_libraries(Informatikprojekt_OpenGL ./glfw/lib-mingw-w64/libglfw3.a)
     target_link_libraries(Informatikprojekt_Vulkan Vulkan::Vulkan ./glfw/lib-mingw-w64/libglfw3.a)
-ELSE()
+ELSE() # libglfw must be provided (e.g. with apt)
     target_link_libraries(Informatikprojekt OpenGL::GL glfw)
     target_link_libraries(Informatikprojekt_OpenGL OpenGL::GL glfw)
     target_link_libraries(Informatikprojekt_Vulkan Vulkan::Vulkan glfw)
