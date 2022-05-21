@@ -27,15 +27,11 @@ find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 
 # glad
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 include_directories(./glad/include)
 
-# GLFW
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-add_subdirectory(./glfw)
+# Linking
 target_link_libraries(Informatikprojekt OpenGL::GL glfw)
 target_link_libraries(Informatikprojekt_OpenGL OpenGL::GL glfw)
 target_link_libraries(Informatikprojekt_Vulkan Vulkan::Vulkan glfw)
