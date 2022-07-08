@@ -69,6 +69,3 @@ Bei meinem System waren es etwas mehr 60 Millionen Partikel.
 Bei 60 Millionen Partikeln gibt es knapp 60 Tausend Arbeitsgruppen, bei meinem System ist die maximale Anzahl 65536.
 Sollte also die Ausführung nichts anzeigen, dann kann es sein, dass Sie die Lokale X Größe anpassen müssen.
 (Anmerkung: Für Partikelanzahl < 1024 sind es zu wenige Gruppen (0), die der Dispatch-Anweisung mit gegeben werden).
-
-
-
